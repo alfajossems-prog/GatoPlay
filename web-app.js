@@ -123,10 +123,18 @@ window.onCatalogLoaded = function(jsonStr, err) {
 
 function processCatalogData(data) {
     if (data && data.site_config) {
-        siteConfig = Object.assign({ hero_mode: "recent", hero_count: 5 }, data.site_config);
+        siteConfig = Object.assign({ hero_mode: "recent", hero_count: 5, hero_timer: 5000 }, data.site_config);
     }
-    catalogItems = extractItemsArray(data);
+    catalogItems = Array.isArray(data) ? data : (data.items || data.movies || data.peliculas || []);
     renderCurrentStreamView();
+
+    const detailModal = document.getElementById("detailModal");
+    if (currentActiveItem && detailModal && !detailModal.classList.contains("hidden")) {
+        const updatedItem = catalogItems.find(function(i) { return String(i.id) === String(currentActiveItem.id); });
+        if (updatedItem) {
+            openDetailModal(updatedItem.id);
+        }
+    }
 }
 
 function renderCurrentStreamView() {
