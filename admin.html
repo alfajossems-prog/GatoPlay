@@ -875,64 +875,58 @@
         }
 
         async function loadCatalogAdmin() {
-            const ts = Date.now();
-            const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
-            if (!localStorage.getItem("gh_token")) localStorage.setItem("gh_token", ghToken);
+        const ts = Date.now();
+        const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
+        if (!localStorage.getItem("gh_token")) localStorage.setItem("gh_token", ghToken);
 
-            const urls = [
-                `https://api.github.com/repos/alfajossems-prog/GatoPlay/contents/catalogo.json?t=${ts}`,
-                `https://api.github.com/repos/alfajossems-prog/gatoplay-db/contents/catalogo.json?t=${ts}`,
-                `./catalogo.json?t=${ts}`
-            ];
+        let loadedData = null;
+        const masterUrl = "https://api.github.com/repos/alfajossems-prog/gatoplay-db/contents/catalogo.json?t=" + ts;
+        const backupUrl = "https://api.github.com/repos/alfajossems-prog/GatoPlay/contents/catalogo.json?t=" + ts;
 
-            let mergedMap = new Map();
-            let loadedConfig = { hero_mode: "recent", hero_count: 5 };
+        try {
+            const r = await fetch(masterUrl, { headers: { "Authorization": "token " + ghToken, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
+            if (r.ok) {
+                let data = await r.json();
+                if (data.content && data.encoding === "base64") {
+                    data = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), m => m.codePointAt(0))));
+                }
+                loadedData = data;
+            }
+        } catch(e) {}
 
-            // Incluir también lo que tengas actualmente en la memoria del navegador de la web para no perder tus títulos recién subidos (Moana 2, Minions, etc.)
-            const cached = localStorage.getItem(STORAGE_KEY);
+        // Solo usar el backup si el master falló por completo
+        if (!loadedData) {
+            try {
+                const r = await fetch(backupUrl, { headers: { "Authorization": "token " + ghToken, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
+                if (r.ok) {
+                    let data = await r.json();
+                    if (data.content && data.encoding === "base64") {
+                        data = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), m => m.codePointAt(0))));
+                    }
+                    loadedData = data;
+                }
+            } catch(e) {}
+        }
+
+        if (loadedData) {
+            currentDb = Array.isArray(loadedData)
+                ? { site_config: { hero_mode: "recent", hero_count: 5 }, items: loadedData }
+                : Object.assign({ site_config: { hero_mode: "recent", hero_count: 5 } }, loadedData, { items: loadedData.items || [] });
+        } else {
+            const cached = localStorage.getItem("gatoplay_catalog_db");
             if (cached) {
                 try {
-                    const parsedCache = JSON.parse(cached);
-                    const cItems = Array.isArray(parsedCache) ? parsedCache : (parsedCache.items || []);
-                    cItems.forEach(item => { if (item && item.id) mergedMap.set(String(item.id), item); });
-                } catch (e) {}
-            }
-
-            for (const u of urls) {
-                try {
-                    const headers = { "Accept": "application/vnd.github.v3+json" };
-                    if (u.includes("api.github.com") && ghToken) headers["Authorization"] = `token ${ghToken}`;
-                    const r = await fetch(u, { cache: "no-store", headers });
-                    if (!r.ok) continue;
-                    let data = await r.json();
-                    if (data && data.content && data.encoding === "base64") {
-                        const binStr = atob(data.content.replace(/\s/g, ""));
-                        const bytes = Uint8Array.from(binStr, m => m.codePointAt(0));
-                        data = JSON.parse(new TextDecoder("utf-8").decode(bytes));
-                    }
-                    if (data && data.site_config) loadedConfig = Object.assign(loadedConfig, data.site_config);
-                    const items = Array.isArray(data) ? data : (data.items || data.movies || []);
-                    items.forEach(item => {
-                        if (item && item.id && !mergedMap.has(String(item.id))) {
-                            mergedMap.set(String(item.id), item);
-                        }
-                    });
-                } catch (e) {}
-            }
-
-            currentDb = {
-                site_config: loadedConfig,
-                items: Array.from(mergedMap.values())
-            };
-            syncLocalCache();
-            renderAdminList();
-            updateApiKeysStatusUI();
-
-            // Subir inmediatamente la lista unificada a ambos repositorios en segundo plano
-            if (currentDb.items.length > 0) {
-                pushDatabaseToCloudAndServer();
+                    const parsed = JSON.parse(cached);
+                    currentDb = Array.isArray(parsed) ? { site_config: { hero_mode: "recent", hero_count: 5 }, items: parsed } : parsed;
+                } catch(e) {}
             }
         }
+
+        if (!currentDb.items) currentDb.items = [];
+        syncLocalCache();
+        renderAdminList();
+        updateApiKeysStatusUI();
+    }
 
         function renderAdminList() {
             const allItems = currentDb.items || [];
@@ -972,19 +966,20 @@
         }
 
         async function deleteCatalogItem(id) {
-            if (!confirm("¿Eliminar este título del catálogo?")) return;
-            currentDb.items = (currentDb.items || []).filter(i => String(i.id) !== String(id));
-
-            try {
-                await fetch("/api/delete-item/" + encodeURIComponent(id), { method: "DELETE" });
-            } catch (e) {}
-
-            await pushDatabaseToCloudAndServer();
-            renderAdminList();
-
-            const currentQ = document.getElementById("tmdbQuery").value.trim();
-            if (currentQ.length >= 2) searchTmdb(currentQ);
-        }
+        if (!confirm("¿Eliminar definitivamente este título del catálogo?")) return;
+        const targetId = String(id).trim();
+        
+        // Eliminar del array local de inmediato
+        currentDb.items = (currentDb.items || []).filter(i => String(i.id).trim() !== targetId);
+        renderAdminList();
+        
+        // Subir los cambios a la nube
+        const success = await pushDatabaseToCloudAndServer();
+        if (!success) alert("Hubo un problema al borrar de la nube. Verifica tu conexión.");
+        
+        const currentQ = document.getElementById("tmdbQuery").value.trim();
+        if (currentQ.length >= 2) searchTmdb(currentQ);
+    }
 
         async function saveHeroConfig() {
             const hero_mode = document.getElementById("cfgHeroMode").value;
