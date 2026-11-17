@@ -312,8 +312,16 @@
                             <option value="1">1 Portada</option>
                             <option value="3">3 Portadas</option>
                             <option value="5" selected>5 Portadas</option>
-                            <option value="7">7 Portadas</option>
                             <option value="10">10 Portadas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="field-label">Giro Automático (Segundos)</span>
+                        <select id="cfgHeroTimer" class="admin-input">
+                            <option value="0">Apagado</option>
+                            <option value="4000">Cada 4 segundos</option>
+                            <option value="6000" selected>Cada 6 segundos</option>
+                            <option value="8000">Cada 8 segundos</option>
                         </select>
                     </div>
                 </div>
@@ -434,6 +442,7 @@
             if (currentDb.site_config) {
                 document.getElementById("cfgHeroMode").value = currentDb.site_config.hero_mode || "recent";
                 document.getElementById("cfgHeroCount").value = String(currentDb.site_config.hero_count || 5);
+                document.getElementById("cfgHeroTimer").value = String(currentDb.site_config.hero_timer !== undefined ? currentDb.site_config.hero_timer : 6000);
             }
             document.getElementById("heroSettingsModal").classList.remove("hidden");
         }
@@ -984,7 +993,8 @@
         async function saveHeroConfig() {
             const hero_mode = document.getElementById("cfgHeroMode").value;
             const hero_count = Number(document.getElementById("cfgHeroCount").value || 5);
-            currentDb.site_config = Object.assign(currentDb.site_config || {}, { hero_mode, hero_count });
+            const hero_timer = Number(document.getElementById("cfgHeroTimer").value || 6000);
+            currentDb.site_config = Object.assign(currentDb.site_config || {}, { hero_mode, hero_count, hero_timer });
             await pushDatabaseToCloudAndServer();
             closeHeroSettingsModal();
         }
