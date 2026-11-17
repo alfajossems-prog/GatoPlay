@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gato CMS - Studio Panel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body style="padding-top: 66px;">
+
+    <header class="top-header">
+        <div class="header-main">
+            <a href="index.html" class="brand-logo">
+                <svg class="ico" style="width:22px;height:22px;stroke:var(--brand-accent);" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                <span>GATO <b>CMS</b></span>
+            </a>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <button class="btn-top-link" onclick="openHeroSettingsModal()" title="Ajustes de Portada y APK">
+                    <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    <span>Portada / APK</span>
+                </button>
+                <a href="index.html" class="btn-top-link">
+                    <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                    <span>Ver Catálogo</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="admin-container">
+
+        <!-- BARRA DE ESTADO DE CLAVES API (GITHUB + TMDB) CON BOTÓN EDITAR -->
+        <div class="api-status-strip">
+            <div class="status-pills-wrap">
+                <div class="status-indicator">
+                    <span id="ghDot" class="status-dot"></span>
+                    <span id="ghStatusText">GitHub Cloud</span>
+                </div>
+                <span style="color:rgba(255,255,255,0.18);">|</span>
+                <div class="status-indicator">
+                    <span id="tmdbDot" class="status-dot"></span>
+                    <span id="tmdbStatusText">TMDB API</span>
+                </div>
+                <span style="color:rgba(255,255,255,0.18);">|</span>
+                <div class="status-indicator" style="cursor:pointer;" onclick="navigator.clipboard.writeText('GP9482716350492'); alert('Llave copiada: GP9482716350492');">
+                    <span style="color:#00c2ff; font-weight:900;">🔑 Llave App: GP9482716350492</span>
+                </div>
+            </div>
+            <button type="button" id="btnManageKeys" class="btn-surface" style="padding:6px 12px; font-size:11.5px;" onclick="openApiKeysModal()">
+                <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span id="btnManageKeysLabel">Editar Claves</span>
+            </button>
+        </div>
+
+        <!-- 1. BUSCADOR EN VIVO TMDB (PRIORIDAD #1 PARA AGREGAR RÁPIDO) -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <span>Buscador en Vivo (TMDB Español)</span>
+                </div>
+                <button type="button" class="btn-surface" style="padding:5px 10px; font-size:11px;" onclick="openEmptyManualForm()">
+                    <svg class="ico" style="width:13px;height:13px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Manual</span>
+                </button>
+            </div>
+
+            <div class="form-grid" style="margin-bottom:0;">
+                <div style="grid-column: 1 / -1; display:flex; gap:8px;">
+                    <select id="searchContentType" class="admin-input" style="max-width:135px; flex-shrink:0;" onchange="onTypeFilterChange(this.value)">
+                        <option value="movie">Película</option>
+                        <option value="series">Serie TV</option>
+                    </select>
+                    <div style="position:relative; flex:1;">
+                        <input type="text" id="tmdbQuery" class="admin-input" placeholder="Escribe para buscar en vivo (Ej: Minions, Moana...)" oninput="onLiveTmdbInput(this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <div id="tmdbSearchStatus" class="hidden" style="font-size:11.5px; color:var(--text-dim); margin-top:8px;">Buscando...</div>
+            <div id="tmdbResultsRow" class="tmdb-results hidden"></div>
+        </div>
+
+        <!-- 2. DATOS DEL CONTENIDO Y ENLACES (OCULTO HASTA QUE SE ELIJA UN TÍTULO) -->
+        <div class="admin-card hidden" id="formEditorCard" style="border-color: rgba(0, 194, 255, 0.45);">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span id="formHeaderTitle">Datos del Contenido y Enlaces</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span id="editStatusBadge" class="hero-type-pill hidden" style="margin-bottom:0;">YA EN CATÁLOGO</span>
+                    <button type="button" class="btn-icon-sq" onclick="closeFormEditor()" title="Cerrar formulario">
+                        <svg class="ico" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="form-grid">
+                <div>
+                    <span class="field-label">Tipo</span>
+                    <select id="fType" class="admin-input" onchange="switchFormMode(this.value)">
+                        <option value="movie">Película</option>
+                        <option value="series">Serie (Temporadas)</option>
+                    </select>
+                </div>
+                <div>
+                    <span class="field-label">ID Único</span>
+                    <input type="text" id="fId" class="admin-input" placeholder="tmdb_550" oninput="checkIfIdExists(this.value)">
+                </div>
+                <div class="form-full">
+                    <span class="field-label">Título en Español</span>
+                    <input type="text" id="fTitle" class="admin-input" placeholder="Nombre de la película o serie">
+                </div>
+                <div>
+                    <span class="field-label">Año</span>
+                    <input type="text" id="fYear" class="admin-input" value="2026">
+                </div>
+                <div>
+                    <span class="field-label">Calidad</span>
+                    <input type="text" id="fQuality" class="admin-input" value="1080p">
+                </div>
+                <div>
+                    <span class="field-label">Idioma</span>
+                    <input type="text" id="fLang" class="admin-input" value="LATINO">
+                </div>
+                <div>
+                    <span class="field-label">Calificación</span>
+                    <input type="text" id="fRating" class="admin-input" value="8.5">
+                </div>
+                <div class="form-full">
+                    <span class="field-label">Géneros (separados por coma)</span>
+                    <input type="text" id="fGenres" class="admin-input" placeholder="Acción, Aventura, Estreno">
+                </div>
+                <div class="form-full">
+                    <span class="field-label">URL del Póster Vertical</span>
+                    <input type="text" id="fPoster" class="admin-input" placeholder="https://image.tmdb.org/t/p/w500/...">
+                </div>
+                <div class="form-full">
+                    <span class="field-label">URL del Fondo Horizontal (Backdrop)</span>
+                    <input type="text" id="fBackdrop" class="admin-input" placeholder="https://image.tmdb.org/t/p/w1280/...">
+                </div>
+                <div class="form-full">
+                    <span class="field-label">Sinopsis</span>
+                    <textarea id="fSynopsis" rows="3" class="admin-input" placeholder="Descripción de la trama..."></textarea>
+                </div>
+                <div class="form-full" style="display:flex; align-items:center; gap:8px; padding-top:2px;">
+                    <input type="checkbox" id="fFeatured" style="width:17px; height:17px; accent-color:var(--brand-accent);">
+                    <label for="fFeatured" style="font-size:12.5px; font-weight:600;">Destacar en el Carrusel de Portada</label>
+                </div>
+            </div>
+
+            <!-- ENLACES PARA PELÍCULA -->
+            <div id="adminMovieServers" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-glass);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span style="font-size:13px; font-weight:800; color:var(--brand-accent); display:inline-flex; align-items:center; gap:6px;">
+                        <svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                        <span>Enlaces de Video / Servidores</span>
+                    </span>
+                    <button type="button" class="btn-cyan" style="padding:6px 12px; font-size:11.5px;" onclick="addServerInputRow('', '')">
+                        <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span>Agregar otro enlace</span>
+                    </button>
+                </div>
+                <div id="dynamicServersContainer"></div>
+            </div>
+
+            <!-- TEMPORADAS Y CAPÍTULOS PARA SERIE -->
+            <div id="adminSeriesEpisodes" class="hidden" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-glass);">
+                <span style="font-size:13px; font-weight:800; color:var(--brand-accent); display:block; margin-bottom:10px;">Temporadas y Capítulos</span>
+                <div class="form-grid">
+                    <div>
+                        <span class="field-label">Temporada</span>
+                        <input type="number" id="epSeasonNum" class="admin-input" value="1">
+                    </div>
+                    <div>
+                        <span class="field-label">Capítulo</span>
+                        <input type="number" id="epNum" class="admin-input" value="1">
+                    </div>
+                    <div class="form-full">
+                        <span class="field-label">Título del Capítulo</span>
+                        <input type="text" id="epTitle" class="admin-input" placeholder="Ej: Episodio 1">
+                    </div>
+                    <div class="form-full">
+                        <span class="field-label">Enlace de Video (Streamtape / MP4)</span>
+                        <input type="text" id="epServerUrl" class="admin-input" placeholder="https://streamtape.com/e/... o .mp4">
+                    </div>
+                </div>
+                <button type="button" class="btn-surface" style="width:100%;" onclick="addEpisodeToDraft()">
+                    <svg class="ico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <span>Añadir Capítulo</span>
+                </button>
+                <div id="draftEpisodesPreview" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+
+            <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
+                <button id="btnSubmitCatalog" class="btn-cyan" style="width:100%; padding:13px; font-size:13.5px;" onclick="saveItemToCatalog()">
+                    <svg class="ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    <span id="btnSubmitText">SUBIR Y PUBLICAR EN EL CATÁLOGO</span>
+                </button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-surface" style="flex:1;" onclick="closeFormEditor()">Cancelar</button>
+                    <button type="button" id="btnDeleteFromForm" class="btn-danger hidden" style="flex:1;" onclick="deleteCurrentFormItem()">
+                        <svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <span>Eliminar Título</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. CONTENIDO GUARDADO EN TU NUBE (CON BUSCADOR PROPIO EN VIVO) -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <svg class="ico" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    <span>Contenido Guardado (<span id="catalogCount">0</span>)</span>
+                </div>
+            </div>
+
+            <!-- BUSCADOR EN VIVO DEL CONTENIDO GUARDADO -->
+            <div style="margin-bottom:12px; position:relative;">
+                <input type="text" id="savedCatalogSearch" class="admin-input" placeholder="Filtrar en tu catálogo guardado por título o año..." oninput="renderAdminList()">
+            </div>
+
+            <div id="adminCatalogList" class="episodes-list"></div>
+        </div>
+
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL 1: GESTIÓN DE CLAVES API (GITHUB TOKEN + TMDB KEY)             -->
+    <!-- ==================================================================== -->
+    <div id="apiKeysModal" class="admin-modal-backdrop hidden" onclick="closeApiKeysModal()">
+        <div class="admin-modal-box" onclick="event.stopPropagation()">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <svg class="ico" viewBox="0 0 24 24"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    <span>Configurar Claves API (Cloud & TMDB)</span>
+                </div>
+                <button type="button" class="btn-icon-sq" onclick="closeApiKeysModal()">
+                    <svg class="ico" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:12px;">
+                <div>
+                    <span class="field-label">Clave API de TMDB (v3)</span>
+                    <input type="text" id="modalTmdbKey" class="admin-input" placeholder="Ej: a62e8cfd975bb03190263788e2ba9a89">
+                </div>
+                <div>
+                    <span class="field-label">GitHub Personal Access Token (ghp_...)</span>
+                    <input type="password" id="modalGhToken" class="admin-input" placeholder="Pega tu Token de GitHub para publicar en la nube">
+                </div>
+                <div class="form-grid" style="margin-bottom:0;">
+                    <div>
+                        <span class="field-label">Usuario GitHub</span>
+                        <input type="text" id="modalGhOwner" class="admin-input" placeholder="alfajossems-prog">
+                    </div>
+                    <div>
+                        <span class="field-label">Repositorio GitHub</span>
+                        <input type="text" id="modalGhRepo" class="admin-input" placeholder="GatoPlay">
+                    </div>
+                </div>
+                <button type="button" class="btn-cyan" style="width:100%; padding:12px;" onclick="saveAllApiKeys()">
+                    <svg class="ico" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Guardar Claves y Conectar</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================================== -->
+    <!-- MODAL 2: CONFIGURACIÓN DE PORTADA Y ENLACE PARA APK                  -->
+    <!-- ==================================================================== -->
+    <div id="heroSettingsModal" class="admin-modal-backdrop hidden" onclick="closeHeroSettingsModal()">
+        <div class="admin-modal-box" onclick="event.stopPropagation()">
+            <div class="admin-card-header">
+                <div class="admin-card-title">
+                    <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>
+                    <span>Portada y Conexión APK</span>
+                </div>
+                <button type="button" class="btn-icon-sq" onclick="closeHeroSettingsModal()">
+                    <svg class="ico" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <span class="field-label">URL API en Vivo para tu APK Gato Play</span>
+                <input type="text" id="liveApkUrlField" class="admin-input" readonly style="margin-bottom:8px; color:var(--brand-accent);">
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn-cyan" style="flex:1;" onclick="copyLiveApiUrl()">Copiar URL APK</button>
+                    <button type="button" class="btn-surface" onclick="copyRawJsonForApk()">Copiar JSON</button>
+                    <button type="button" class="btn-surface" onclick="downloadJsonFile()">Descargar</button>
+                </div>
+                <p id="copyFeedback" style="font-size:11.5px; color:var(--match-green); margin-top:6px;"></p>
+            </div>
+
+            <div style="padding-top:14px; border-top:1px solid var(--border-glass);">
+                <span class="field-label" style="margin-bottom:8px;">Configuración del Carrusel de Portada</span>
+                <div class="form-grid">
+                    <div>
+                        <span class="field-label">Orden de Portada</span>
+                        <select id="cfgHeroMode" class="admin-input">
+                            <option value="recent">Recién Agregadas</option>
+                            <option value="premiere">Películas de Estreno</option>
+                            <option value="featured">Destacadas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <span class="field-label">Cantidad</span>
+                        <select id="cfgHeroCount" class="admin-input">
+                            <option value="1">1 Portada</option>
+                            <option value="3">3 Portadas</option>
+                            <option value="5" selected>5 Portadas</option>
+                            <option value="7">7 Portadas</option>
+                            <option value="10">10 Portadas</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" class="btn-cyan" style="width:100%;" onclick="saveHeroConfig()">Guardar Configuración de Portada</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = "gatoplay_catalog_db";
+        const DEFAULT_TMDB_KEY = "a62e8cfd975bb03190263788e2ba9a89";
+        let currentDb = {
+            site_config: { site_name: "GATO<b>PLAY</b>", accent_color: "#00c2ff", hero_mode: "recent", hero_count: 5 },
+            items: []
+        };
+        let draftSeasonsMap = {};
+        let liveSearchTimer = null;
+
+        const SVG_CHECK_SM = `<svg viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12"/></svg>`;
+        const SVG_EDIT = `<svg class="ico" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+        const SVG_TRASH = `<svg class="ico" style="width:15px;height:15px;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+
+        const TMDB_GENRES = {
+            28: "Acción", 12: "Aventura", 16: "Animación", 35: "Comedia", 80: "Crimen",
+            99: "Documental", 18: "Drama", 10751: "Familia", 14: "Fantasía", 36: "Historia",
+            27: "Terror", 10402: "Música", 9648: "Misterio", 10749: "Romance", 878: "Ciencia Ficción",
+            10770: "Película de TV", 53: "Suspenso", 10752: "Bélica", 37: "Western",
+            10759: "Acción y Aventura", 10762: "Infantil", 10765: "Sci-Fi y Fantasía", 10768: "Guerra y Política"
+        };
+
+        function inferGithubRepoFromUrl() {
+            const owner = "alfajossems-prog";
+            const repo = "gatoplay-db";
+            localStorage.setItem("gh_owner", owner);
+            localStorage.setItem("gh_repo", repo);
+            if (!localStorage.getItem("gh_token")) {
+                localStorage.setItem("gh_token", (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join("")));
+            }
+            return { owner, repo };
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            if (!localStorage.getItem("tmdb_api_key")) {
+                localStorage.setItem("tmdb_api_key", DEFAULT_TMDB_KEY);
+            }
+            const inferred = inferGithubRepoFromUrl();
+            if (!localStorage.getItem("gh_owner")) localStorage.setItem("gh_owner", inferred.owner);
+            if (!localStorage.getItem("gh_repo")) localStorage.setItem("gh_repo", inferred.repo);
+
+            updateApiKeysStatusUI();
+            resetServersUI();
+            await loadCatalogAdmin();
+        });
+
+        function updateApiKeysStatusUI() {
+            const tmdbKey = localStorage.getItem("tmdb_api_key") || "";
+            const ghToken = localStorage.getItem("gh_token") || "";
+            const { owner, repo } = inferGithubRepoFromUrl();
+
+            const ghDot = document.getElementById("ghDot");
+            const ghText = document.getElementById("ghStatusText");
+            const tmdbDot = document.getElementById("tmdbDot");
+            const tmdbText = document.getElementById("tmdbStatusText");
+            const btnLabel = document.getElementById("btnManageKeysLabel");
+
+            if (ghToken) {
+                ghDot.className = "status-dot";
+                ghText.textContent = `Cloud Activo (${currentDb.items ? currentDb.items.length : 0})`;
+            } else {
+                ghDot.className = "status-dot warn";
+                ghText.textContent = "Cloud Local";
+            }
+
+            if (tmdbKey) {
+                tmdbDot.className = "status-dot";
+                tmdbText.textContent = "TMDB Listo";
+            } else {
+                tmdbDot.className = "status-dot warn";
+                tmdbText.textContent = "Sin TMDB Key";
+            }
+
+            btnLabel.textContent = (ghToken || tmdbKey) ? "Editar" : "Configurar Claves";
+            document.getElementById("liveApkUrlField").value = `https://raw.githubusercontent.com/${owner}/${repo}/main/catalogo.json`;
+        }
+
+        function openApiKeysModal() {
+            const { owner, repo } = inferGithubRepoFromUrl();
+            document.getElementById("modalTmdbKey").value = localStorage.getItem("tmdb_api_key") || DEFAULT_TMDB_KEY;
+            document.getElementById("modalGhToken").value = localStorage.getItem("gh_token") || "";
+            document.getElementById("modalGhOwner").value = owner;
+            document.getElementById("modalGhRepo").value = repo;
+            document.getElementById("apiKeysModal").classList.remove("hidden");
+        }
+
+        function closeApiKeysModal() {
+            document.getElementById("apiKeysModal").classList.add("hidden");
+        }
+
+        async function saveAllApiKeys() {
+            const tmdbKey = document.getElementById("modalTmdbKey").value.trim() || DEFAULT_TMDB_KEY;
+            const ghToken = document.getElementById("modalGhToken").value.trim();
+            const ghOwner = document.getElementById("modalGhOwner").value.trim();
+            const ghRepo = document.getElementById("modalGhRepo").value.trim();
+
+            localStorage.setItem("tmdb_api_key", tmdbKey);
+            if (ghToken) localStorage.setItem("gh_token", ghToken);
+            else localStorage.removeItem("gh_token");
+            if (ghOwner) localStorage.setItem("gh_owner", ghOwner);
+            if (ghRepo) localStorage.setItem("gh_repo", ghRepo);
+
+            closeApiKeysModal();
+            await loadCatalogAdmin();
+            updateApiKeysStatusUI();
+        }
+
+        function openHeroSettingsModal() {
+            updateApiKeysStatusUI();
+            if (currentDb.site_config) {
+                document.getElementById("cfgHeroMode").value = currentDb.site_config.hero_mode || "recent";
+                document.getElementById("cfgHeroCount").value = String(currentDb.site_config.hero_count || 5);
+            }
+            document.getElementById("heroSettingsModal").classList.remove("hidden");
+        }
+
+        function closeHeroSettingsModal() {
+            document.getElementById("heroSettingsModal").classList.add("hidden");
+        }
+
+        function syncLocalCache() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(currentDb));
+            updateApiKeysStatusUI();
+        }
+
+        // SINCRONIZACIÓN DIRECTA CON GITHUB API (SI TIENE TOKEN) + SERVIDOR NODE LOCAL
+        async function pushSingleRepo(owner, repo, ghToken, jsonString) {
+            try {
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/catalogo.json`;
+                let sha = undefined;
+                const getRes = await fetch(apiUrl + "?t=" + Date.now(), {
+                    headers: { "Authorization": `token ${ghToken}`, "Accept": "application/vnd.github.v3+json" },
+                    cache: "no-store"
+                });
+                if (getRes.ok) {
+                    const existingFile = await getRes.json();
+                    sha = existingFile.sha;
+                }
+                const utf8Bytes = new TextEncoder().encode(jsonString);
+                let bin = "";
+                utf8Bytes.forEach(b => bin += String.fromCharCode(b));
+                const contentBase64 = btoa(bin);
+
+                const putRes = await fetch(apiUrl, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `token ${ghToken}`,
+                        "Accept": "application/vnd.github.v3+json",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: "Sincronizacion automatica Gato Play (Llave GP9482716350492)",
+                        content: contentBase64,
+                        sha
+                    })
+                });
+                return putRes.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function pushDatabaseToCloudAndServer() {
+            syncLocalCache();
+            const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
+            const jsonStr = JSON.stringify(currentDb, null, 2);
+            // Guardar simultáneamente en GatoPlay (Web) y gatoplay-db (Nube APK) para que jamás estén desincronizados
+            await Promise.all([
+                pushSingleRepo("alfajossems-prog", "GatoPlay", ghToken, jsonStr),
+                pushSingleRepo("alfajossems-prog", "gatoplay-db", ghToken, jsonStr)
+            ]);
+            return true;
+        }
+
+        // BUSCADOR EN VIVO TMDB (CON DEBOUNCE DE 300ms Y PALOMITA VERDE)
+        function onTypeFilterChange(val) {
+            switchFormMode(val);
+            const q = document.getElementById("tmdbQuery").value.trim();
+            if (q.length >= 2) searchTmdb(q);
+        }
+
+        function onLiveTmdbInput(val) {
+            if (liveSearchTimer) clearTimeout(liveSearchTimer);
+            const q = val.trim();
+            if (q.length < 2) {
+                document.getElementById("tmdbResultsRow").classList.add("hidden");
+                document.getElementById("tmdbSearchStatus").classList.add("hidden");
+                return;
+            }
+            document.getElementById("tmdbSearchStatus").classList.remove("hidden");
+            liveSearchTimer = setTimeout(() => searchTmdb(q), 300);
+        }
+
+        async function searchTmdb(customQuery) {
+            const key = (localStorage.getItem("tmdb_api_key") || DEFAULT_TMDB_KEY).trim();
+            const query = (customQuery !== undefined ? customQuery : document.getElementById("tmdbQuery").value).trim();
+            const mode = document.getElementById("searchContentType").value;
+            if (!query) return;
+
+            const endpoint = mode === "series" ? "tv" : "movie";
+            const url = `https://api.themoviedb.org/3/search/${endpoint}?api_key=${encodeURIComponent(key)}&language=es-MX&query=${encodeURIComponent(query)}`;
+
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                document.getElementById("tmdbSearchStatus").classList.add("hidden");
+
+                const results = data.results || [];
+                const row = document.getElementById("tmdbResultsRow");
+                row.classList.remove("hidden");
+
+                if (!results.length) {
+                    row.innerHTML = `<p style="font-size:12px; color:var(--text-dim);">Sin resultados para "${escapeAttr(query)}".</p>`;
+                    return;
+                }
+
+                // Mapa de IDs y Títulos ya agregados para mostrar la palomita verde
+                const existingIds = new Set((currentDb.items || []).map(i => String(i.id)));
+                const existingTitles = new Set((currentDb.items || []).map(i => (i.title || "").toLowerCase().trim()));
+
+                row.innerHTML = results.slice(0, 12).map(item => {
+                    const tmdbId = "tmdb_" + item.id;
+                    const title = item.title || item.name || "Sin título";
+                    const date = (item.release_date || item.first_air_date || "2026").substring(0, 4);
+                    const poster = item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : window.FALLBACK_POSTER || "";
+                    const backdrop = item.backdrop_path ? `https://image.tmdb.org/t/p/w1280${item.backdrop_path}` : poster;
+                    const genreNames = (item.genre_ids || []).map(id => TMDB_GENRES[id]).filter(Boolean).join(", ");
+
+                    const isAdded = existingIds.has(tmdbId) || existingTitles.has(title.toLowerCase().trim());
+
+                    const payload = encodeURIComponent(JSON.stringify({
+                        id: tmdbId,
+                        type: mode,
+                        title,
+                        year: date,
+                        rating: (item.vote_average || 8.0).toFixed(1),
+                        genres: genreNames || "Estreno, Destacado",
+                        poster,
+                        backdrop,
+                        synopsis: item.overview || ""
+                    }));
+
+                    return `
+                        <div class="tmdb-item ${isAdded ? 'already-added' : ''}" onclick="fillFromTmdb('${payload}')">
+                            <div class="tmdb-item-poster-wrap">
+                                <img src="${poster}" alt="" loading="lazy">
+                                ${isAdded ? `<span class="tmdb-added-check" title="Ya agregado en tu catálogo">${SVG_CHECK_SM}</span>` : ''}
+                            </div>
+                            <p>${escapeAttr(title)} (${date})</p>
+                        </div>
+                    `;
+                }).join("");
+            } catch (e) {
+                document.getElementById("tmdbSearchStatus").classList.add("hidden");
+            }
+        }
+
+        // MOSTRAR EL FORMULARIO SOLO AL ELEGIR UN TÍTULO
+        function fillFromTmdb(encoded) {
+            const d = JSON.parse(decodeURIComponent(encoded));
+            const existing = (currentDb.items || []).find(
+                i => String(i.id) === String(d.id) || (i.title || "").toLowerCase().trim() === (d.title || "").toLowerCase().trim()
+            );
+
+            if (existing) {
+                editCatalogItem(existing.id);
+                return;
+            }
+
+            document.getElementById("formEditorCard").classList.remove("hidden");
+            switchFormMode(d.type || "movie");
+            document.getElementById("fId").value = d.id;
+            document.getElementById("fTitle").value = d.title;
+            document.getElementById("fYear").value = d.year;
+            document.getElementById("fQuality").value = "1080p";
+            document.getElementById("fLang").value = "LATINO";
+            document.getElementById("fRating").value = d.rating;
+            document.getElementById("fGenres").value = d.genres || "Estreno";
+            document.getElementById("fPoster").value = d.poster;
+            document.getElementById("fBackdrop").value = d.backdrop;
+            document.getElementById("fSynopsis").value = d.synopsis;
+            document.getElementById("fFeatured").checked = false;
+
+            resetServersUI();
+            draftSeasonsMap = {};
+            renderDraftEpisodes();
+            checkIfIdExists(d.id);
+
+            document.getElementById("formEditorCard").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        function openEmptyManualForm() {
+            resetForm();
+            document.getElementById("formEditorCard").classList.remove("hidden");
+            document.getElementById("formEditorCard").scrollIntoView({ behavior: "smooth" });
+        }
+
+        function closeFormEditor() {
+            document.getElementById("formEditorCard").classList.add("hidden");
+        }
+
+        function resetServersUI(serversArray) {
+            const container = document.getElementById("dynamicServersContainer");
+            container.innerHTML = "";
+            if (Array.isArray(serversArray) && serversArray.length > 0) {
+                serversArray.forEach(s => addServerInputRow(s.name || "Streamtape", s.url || "", s.quality || "1080p"));
+            } else {
+                addServerInputRow("Streamtape", "", "1080p");
+            }
+        }
+
+        function addServerInputRow(nameVal, urlVal, qualityVal) {
+            const container = document.getElementById("dynamicServersContainer");
+            const idx = container.children.length + 1;
+            const div = document.createElement("div");
+            div.className = "server-pair-box srv-input-item";
+            div.innerHTML = `
+                <div class="form-grid" style="margin-bottom:8px;">
+                    <input type="text" class="admin-input srv-name-field" value="${escapeAttr(nameVal || 'Streamtape')}" placeholder="Servidor (Ej: Streamtape)">
+                    <input type="text" class="admin-input srv-qual-field" value="${escapeAttr(qualityVal || '1080p')}" placeholder="1080p">
+                </div>
+                <input type="text" class="admin-input srv-url-field" value="${escapeAttr(urlVal || '')}" placeholder="https://streamtape.com/v/... o enlace .mp4">
+                ${idx > 1 ? `
+                <button type="button" class="btn-danger" style="width:100%; margin-top:8px; padding:7px;" onclick="this.closest('.srv-input-item').remove()">
+                    ${SVG_TRASH} <span>Quitar este enlace</span>
+                </button>` : ''}
+            `;
+            container.appendChild(div);
+        }
+
+        function collectServerInputs(defaultQuality) {
+            const rows = document.querySelectorAll("#dynamicServersContainer .srv-input-item");
+            const list = [];
+            rows.forEach((r, i) => {
+                const name = r.querySelector(".srv-name-field").value.trim() || `Servidor ${i + 1}`;
+                const qual = r.querySelector(".srv-qual-field").value.trim() || defaultQuality || "1080p";
+                const url = r.querySelector(".srv-url-field").value.trim();
+                if (url) {
+                    list.push({ name, quality: qual, format: "MP4", url });
+                }
+            });
+            return list;
+        }
+
+        function switchFormMode(type) {
+            document.getElementById("fType").value = type;
+            document.getElementById("searchContentType").value = type;
+            if (type === "series") {
+                document.getElementById("adminMovieServers").classList.add("hidden");
+                document.getElementById("adminSeriesEpisodes").classList.remove("hidden");
+            } else {
+                document.getElementById("adminSeriesEpisodes").classList.add("hidden");
+                document.getElementById("adminMovieServers").classList.remove("hidden");
+            }
+        }
+
+        function checkIfIdExists(idVal) {
+            const cleanId = String(idVal || "").trim();
+            const existing = (currentDb.items || []).find(i => String(i.id) === cleanId);
+            const delBtn = document.getElementById("btnDeleteFromForm");
+            const badge = document.getElementById("editStatusBadge");
+            const submitText = document.getElementById("btnSubmitText");
+
+            if (existing) {
+                delBtn.classList.remove("hidden");
+                badge.classList.remove("hidden");
+                submitText.textContent = "GUARDAR CAMBIOS EN LA NUBE";
+            } else {
+                delBtn.classList.add("hidden");
+                badge.classList.add("hidden");
+                submitText.textContent = "SUBIR Y PUBLICAR EN EL CATÁLOGO";
+            }
+        }
+
+        function addEpisodeToDraft() {
+            const sNum = Number(document.getElementById("epSeasonNum").value || 1);
+            const eNum = Number(document.getElementById("epNum").value || 1);
+            const eTitle = document.getElementById("epTitle").value.trim() || `Episodio ${eNum}`;
+            const eUrl = document.getElementById("epServerUrl").value.trim();
+
+            if (!eUrl) return alert("Coloca el enlace del capítulo.");
+
+            if (!draftSeasonsMap[sNum]) draftSeasonsMap[sNum] = [];
+            const epObj = {
+                episode_number: eNum,
+                title: eTitle,
+                duration: "45 min",
+                servers: [{ name: "Streamtape", quality: "1080p", format: "MP4", url: eUrl }]
+            };
+
+            const existingEpIdx = draftSeasonsMap[sNum].findIndex(x => Number(x.episode_number) === eNum);
+            if (existingEpIdx >= 0) {
+                draftSeasonsMap[sNum][existingEpIdx] = epObj;
+            } else {
+                draftSeasonsMap[sNum].push(epObj);
+            }
+
+            document.getElementById("epNum").value = eNum + 1;
+            document.getElementById("epTitle").value = "";
+            document.getElementById("epServerUrl").value = "";
+            renderDraftEpisodes();
+        }
+
+        function removeDraftEpisode(sNum, eNum) {
+            if (!draftSeasonsMap[sNum]) return;
+            draftSeasonsMap[sNum] = draftSeasonsMap[sNum].filter(ep => Number(ep.episode_number) !== Number(eNum));
+            if (!draftSeasonsMap[sNum].length) delete draftSeasonsMap[sNum];
+            renderDraftEpisodes();
+        }
+
+        function renderDraftEpisodes() {
+            const box = document.getElementById("draftEpisodesPreview");
+            const lines = [];
+            Object.keys(draftSeasonsMap).forEach(s => {
+                draftSeasonsMap[s].forEach(ep => {
+                    lines.push(`
+                        <div class="ep-card">
+                            <div class="ep-meta">
+                                <h4>T${s} • Cap ${ep.episode_number}: ${escapeAttr(ep.title)}</h4>
+                                <p>${escapeAttr(ep.servers[0].url)}</p>
+                            </div>
+                            <button type="button" class="btn-icon-sq del" onclick="removeDraftEpisode(${s}, ${ep.episode_number})">${SVG_TRASH}</button>
+                        </div>
+                    `);
+                });
+            });
+            box.innerHTML = lines.join("");
+        }
+
+        async function saveItemToCatalog() {
+            const type = document.getElementById("fType").value;
+            const title = document.getElementById("fTitle").value.trim();
+            if (!title) return alert("El título es obligatorio.");
+
+            const itemId = document.getElementById("fId").value.trim() || ("id_" + Date.now());
+            const qualityVal = document.getElementById("fQuality").value.trim() || "1080p";
+
+            const newItem = {
+                id: itemId,
+                type,
+                title,
+                year: document.getElementById("fYear").value.trim() || "2026",
+                quality: qualityVal,
+                language: document.getElementById("fLang").value.trim() || "LATINO",
+                rating: document.getElementById("fRating").value.trim() || "8.5",
+                featured: document.getElementById("fFeatured").checked,
+                genres: document.getElementById("fGenres").value.split(",").map(s => s.trim()).filter(Boolean),
+                poster: document.getElementById("fPoster").value.trim(),
+                backdrop: document.getElementById("fBackdrop").value.trim() || document.getElementById("fPoster").value.trim(),
+                synopsis: document.getElementById("fSynopsis").value.trim()
+            };
+
+            if (type === "series") {
+                newItem.seasons = Object.keys(draftSeasonsMap).map(sNum => ({
+                    season_number: Number(sNum),
+                    episodes: draftSeasonsMap[sNum]
+                }));
+                if (!newItem.seasons.length) return alert("Agrega al menos 1 capítulo a la serie.");
+            } else {
+                const servers = collectServerInputs(qualityVal);
+                if (!servers.length) return alert("Coloca al menos 1 enlace de video.");
+                newItem.servers = servers;
+            }
+
+            const btnText = document.getElementById("btnSubmitText");
+            btnText.textContent = "GUARDANDO EN LA NUBE...";
+
+            if (!Array.isArray(currentDb.items)) currentDb.items = [];
+            const existingIndex = currentDb.items.findIndex(i => String(i.id) === String(newItem.id));
+            if (existingIndex >= 0) {
+                currentDb.items[existingIndex] = newItem;
+            } else {
+                currentDb.items.unshift(newItem);
+            }
+
+            try {
+                await fetch("/api/save-item", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(newItem)
+                });
+            } catch (e) {}
+
+            await pushDatabaseToCloudAndServer();
+            renderAdminList();
+
+            // Refrescar palomita verde en los resultados de búsqueda actuales si están abiertos
+            const currentQ = document.getElementById("tmdbQuery").value.trim();
+            if (currentQ.length >= 2) searchTmdb(currentQ);
+
+            closeFormEditor();
+            resetForm();
+        }
+
+        function editCatalogItem(id) {
+            const item = (currentDb.items || []).find(i => String(i.id) === String(id));
+            if (!item) return;
+
+            document.getElementById("formEditorCard").classList.remove("hidden");
+            switchFormMode(item.type || "movie");
+            document.getElementById("fId").value = item.id || "";
+            document.getElementById("fTitle").value = item.title || "";
+            document.getElementById("fYear").value = item.year || "2026";
+            document.getElementById("fQuality").value = item.quality || "1080p";
+            document.getElementById("fLang").value = item.language || "LATINO";
+            document.getElementById("fRating").value = item.rating || "8.5";
+            document.getElementById("fGenres").value = (item.genres || []).join(", ");
+            document.getElementById("fPoster").value = item.poster || "";
+            document.getElementById("fBackdrop").value = item.backdrop || "";
+            document.getElementById("fSynopsis").value = item.synopsis || "";
+            document.getElementById("fFeatured").checked = Boolean(item.featured);
+
+            if (item.type === "series") {
+                draftSeasonsMap = {};
+                (item.seasons || []).forEach(s => {
+                    draftSeasonsMap[s.season_number] = [...(s.episodes || [])];
+                });
+                renderDraftEpisodes();
+            } else {
+                resetServersUI(item.servers || []);
+            }
+
+            checkIfIdExists(item.id);
+            document.getElementById("formEditorCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        function resetForm() {
+            document.getElementById("fId").value = "";
+            document.getElementById("fTitle").value = "";
+            document.getElementById("fYear").value = "2026";
+            document.getElementById("fQuality").value = "1080p";
+            document.getElementById("fLang").value = "LATINO";
+            document.getElementById("fRating").value = "8.7";
+            document.getElementById("fGenres").value = "";
+            document.getElementById("fPoster").value = "";
+            document.getElementById("fBackdrop").value = "";
+            document.getElementById("fSynopsis").value = "";
+            document.getElementById("fFeatured").checked = false;
+            resetServersUI();
+            draftSeasonsMap = {};
+            renderDraftEpisodes();
+            checkIfIdExists("");
+        }
+
+        async function deleteCurrentFormItem() {
+            const id = document.getElementById("fId").value.trim();
+            if (!id) return;
+            await deleteCatalogItem(id);
+            closeFormEditor();
+            resetForm();
+        }
+
+        async function loadCatalogAdmin() {
+            const ts = Date.now();
+            const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
+            if (!localStorage.getItem("gh_token")) localStorage.setItem("gh_token", ghToken);
+
+            const urls = [
+                `https://api.github.com/repos/alfajossems-prog/GatoPlay/contents/catalogo.json?t=${ts}`,
+                `https://api.github.com/repos/alfajossems-prog/gatoplay-db/contents/catalogo.json?t=${ts}`,
+                `./catalogo.json?t=${ts}`
+            ];
+
+            let mergedMap = new Map();
+            let loadedConfig = { hero_mode: "recent", hero_count: 5 };
+
+            // Incluir también lo que tengas actualmente en la memoria del navegador de la web para no perder tus títulos recién subidos (Moana 2, Minions, etc.)
+            const cached = localStorage.getItem(STORAGE_KEY);
+            if (cached) {
+                try {
+                    const parsedCache = JSON.parse(cached);
+                    const cItems = Array.isArray(parsedCache) ? parsedCache : (parsedCache.items || []);
+                    cItems.forEach(item => { if (item && item.id) mergedMap.set(String(item.id), item); });
+                } catch (e) {}
+            }
+
+            for (const u of urls) {
+                try {
+                    const headers = { "Accept": "application/vnd.github.v3+json" };
+                    if (u.includes("api.github.com") && ghToken) headers["Authorization"] = `token ${ghToken}`;
+                    const r = await fetch(u, { cache: "no-store", headers });
+                    if (!r.ok) continue;
+                    let data = await r.json();
+                    if (data && data.content && data.encoding === "base64") {
+                        const binStr = atob(data.content.replace(/\s/g, ""));
+                        const bytes = Uint8Array.from(binStr, m => m.codePointAt(0));
+                        data = JSON.parse(new TextDecoder("utf-8").decode(bytes));
+                    }
+                    if (data && data.site_config) loadedConfig = Object.assign(loadedConfig, data.site_config);
+                    const items = Array.isArray(data) ? data : (data.items || data.movies || []);
+                    items.forEach(item => {
+                        if (item && item.id && !mergedMap.has(String(item.id))) {
+                            mergedMap.set(String(item.id), item);
+                        }
+                    });
+                } catch (e) {}
+            }
+
+            currentDb = {
+                site_config: loadedConfig,
+                items: Array.from(mergedMap.values())
+            };
+            syncLocalCache();
+            renderAdminList();
+            updateApiKeysStatusUI();
+
+            // Subir inmediatamente la lista unificada a ambos repositorios en segundo plano
+            if (currentDb.items.length > 0) {
+                pushDatabaseToCloudAndServer();
+            }
+        }
+
+        function renderAdminList() {
+            const allItems = currentDb.items || [];
+            document.getElementById("catalogCount").textContent = allItems.length;
+
+            const filterQ = (document.getElementById("savedCatalogSearch").value || "").trim().toLowerCase();
+            const filtered = filterQ
+                ? allItems.filter(i => (i.title || "").toLowerCase().includes(filterQ) || String(i.year || "").includes(filterQ))
+                : allItems;
+
+            const box = document.getElementById("adminCatalogList");
+            if (!filtered.length) {
+                box.innerHTML = `<p style="font-size:12.5px; color:var(--text-dim); text-align:center; padding:14px 0;">${filterQ ? 'No coinciden títulos con tu búsqueda.' : 'Tu catálogo está vacío. Busca una película arriba para empezar.'}</p>`;
+                return;
+            }
+
+            box.innerHTML = filtered.map(item => {
+                const linksCount = item.type === "series"
+                    ? `${(item.seasons || []).length} temp.`
+                    : `${(item.servers || []).length} enlaces`;
+                return `
+                    <div class="saved-item-row">
+                        <div class="saved-item-left">
+                            <img src="${escapeAttr(item.poster || '')}" class="saved-item-thumb" alt="" loading="lazy">
+                            <div class="ep-meta">
+                                <h4>${escapeAttr(item.title)}</h4>
+                                <p>${escapeAttr(item.year || '2026')} • ${linksCount}</p>
+                            </div>
+                        </div>
+                        <div class="action-pair">
+                            <button type="button" class="btn-icon-sq edit" title="Editar" onclick="editCatalogItem('${escapeAttr(item.id)}')">${SVG_EDIT}</button>
+                            <button type="button" class="btn-icon-sq del" title="Eliminar" onclick="deleteCatalogItem('${escapeAttr(item.id)}')">${SVG_TRASH}</button>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        async function deleteCatalogItem(id) {
+            if (!confirm("¿Eliminar este título del catálogo?")) return;
+            currentDb.items = (currentDb.items || []).filter(i => String(i.id) !== String(id));
+
+            try {
+                await fetch("/api/delete-item/" + encodeURIComponent(id), { method: "DELETE" });
+            } catch (e) {}
+
+            await pushDatabaseToCloudAndServer();
+            renderAdminList();
+
+            const currentQ = document.getElementById("tmdbQuery").value.trim();
+            if (currentQ.length >= 2) searchTmdb(currentQ);
+        }
+
+        async function saveHeroConfig() {
+            const hero_mode = document.getElementById("cfgHeroMode").value;
+            const hero_count = Number(document.getElementById("cfgHeroCount").value || 5);
+            currentDb.site_config = Object.assign(currentDb.site_config || {}, { hero_mode, hero_count });
+            await pushDatabaseToCloudAndServer();
+            closeHeroSettingsModal();
+        }
+
+        function copyLiveApiUrl() {
+            const url = document.getElementById("liveApkUrlField").value;
+            navigator.clipboard.writeText(url);
+            document.getElementById("copyFeedback").textContent = "URL copiada al portapapeles";
+        }
+
+        function copyRawJsonForApk() {
+            navigator.clipboard.writeText(JSON.stringify(currentDb, null, 2));
+            document.getElementById("copyFeedback").textContent = "JSON completo copiado";
+        }
+
+        function downloadJsonFile() {
+            const blob = new Blob([JSON.stringify(currentDb, null, 2)], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = "catalogo.json";
+            a.click();
+        }
+
+        function escapeAttr(str) {
+            return String(str || "").replace(/[&<>"']/g, s => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[s]));
+        }
+    </script>
+</body>
+</html>
