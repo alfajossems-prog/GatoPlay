@@ -1020,8 +1020,24 @@
 
 <script>
 window.__lastTmdbId = "";
+
+function getTmdbKeyForSubs() {
+  try {
+    if (typeof TMDB_API_KEY !== "undefined" && TMDB_API_KEY) return TMDB_API_KEY;
+    if (typeof TMDB_KEY !== "undefined" && TMDB_KEY) return TMDB_KEY;
+    const keys = ["tmdb_api_key", "tmdbKey", "gato_tmdb_key", "TMDB_API_KEY", "tmdb_key"];
+    for (const k of keys) {
+      const v = localStorage.getItem(k);
+      if (v && v.trim().length > 10) return v.trim();
+    }
+    const inp = document.querySelector('#apiKeysModal input[id*="tmdb" i], #apiKeysModal input[placeholder*="TMDB" i]');
+    if (inp && inp.value.trim().length > 10) return inp.value.trim();
+  } catch (e) {}
+  return "";
+}
+
 async function buscarSubtituloWyzie(tmdbId) {
-  const id = tmdbId || window.__lastTmdbId || "";
+  const id = String(tmdbId || window.__lastTmdbId || "").trim();
   const input = document.getElementById("fSubtitle");
   const msg = document.getElementById("subStatusMsg");
   if (!input || !msg) return;
@@ -1029,22 +1045,62 @@ async function buscarSubtituloWyzie(tmdbId) {
     msg.textContent = "Selecciona primero un título de TMDB para buscar subtítulos.";
     return;
   }
-  msg.textContent = "Buscando subtítulos en español (Wyzie Subs)...";
+
+  msg.textContent = "Buscando subtítulos en español (OpenSubtitles)...";
   try {
-    const res = await fetch("https://sub.wyzie.ru/search?id=" + encodeURIComponent(id) + "&language=es");
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    const data = await res.json();
-    if (Array.isArray(data) && data.length > 0) {
-      const best = data.find(s => (s.url || "").toLowerCase().includes(".vtt")) || data[0];
-      if (best && best.url) {
-        input.value = best.url;
-        msg.textContent = "✅ Subtítulo encontrado (" + (best.display || "Español") + ")";
+    let imdbId = id.startsWith("tt") ? id : "";
+    let mediaType = "movie";
+
+    if (!imdbId) {
+      const tmdbKey = getTmdbKeyForSubs();
+      if (!tmdbKey) {
+        msg.textContent = "Falta la llave de TMDB en configuración para obtener el IMDb ID.";
         return;
       }
+      // Intentar como película y si no trae imdb_id, intentar como serie
+      let extRes = await fetch("https://api.themoviedb.org/3/movie/" + encodeURIComponent(id) + "/external_ids?api_key=" + encodeURIComponent(tmdbKey));
+      let extData = extRes.ok ? await extRes.json() : null;
+      if (extData && extData.imdb_id) {
+        imdbId = extData.imdb_id;
+        mediaType = "movie";
+      } else {
+        extRes = await fetch("https://api.themoviedb.org/3/tv/" + encodeURIComponent(id) + "/external_ids?api_key=" + encodeURIComponent(tmdbKey));
+        extData = extRes.ok ? await extRes.json() : null;
+        if (extData && extData.imdb_id) {
+          imdbId = extData.imdb_id;
+          mediaType = "series";
+        }
+      }
     }
-    msg.textContent = "No se encontraron subtítulos automáticos. Puedes pegar uno manual.";
+
+    if (!imdbId) {
+      msg.textContent = "No se encontró IMDb ID para este título. Puedes pegar el subtítulo manual.";
+      return;
+    }
+
+    const endpoint = mediaType === "series"
+      ? "https://opensubtitles-v3.strem.io/subtitles/series/" + encodeURIComponent(imdbId) + ":1:1.json"
+      : "https://opensubtitles-v3.strem.io/subtitles/movie/" + encodeURIComponent(imdbId) + ".json";
+
+    const subRes = await fetch(endpoint);
+    if (!subRes.ok) throw new Error("HTTP " + subRes.status);
+    const subData = await subRes.json();
+    const list = (subData && Array.isArray(subData.subtitles)) ? subData.subtitles : [];
+
+    // Filtrar español (spa / es)
+    const esSubs = list.filter(s => {
+      const l = (s.lang || "").toLowerCase();
+      return l === "spa" || l === "es" || l.startsWith("es-") || l.includes("spanish");
+    });
+
+    if (esSubs.length > 0 && esSubs[0].url) {
+      input.value = esSubs[0].url;
+      msg.textContent = "✅ Subtítulo encontrado (OpenSubtitles Español)";
+    } else {
+      msg.textContent = "No hay subtítulos en español disponibles para este título.";
+    }
   } catch (e) {
-    msg.textContent = "No se pudo consultar Wyzie Subs (" + e.message + ").";
+    msg.textContent = "Error al buscar subtítulos (" + e.message + ").";
   }
 }
 </script>
