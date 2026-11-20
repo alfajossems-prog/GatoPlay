@@ -41,10 +41,6 @@
                     <span id="tmdbDot" class="status-dot"></span>
                     <span id="tmdbStatusText">TMDB API</span>
                 </div>
-                <span style="color:rgba(255,255,255,0.18);">|</span>
-                <div class="status-indicator" style="cursor:pointer;" onclick="navigator.clipboard.writeText('GP9482716350492'); alert('Llave copiada: GP9482716350492');">
-                    <span style="color:#00c2ff; font-weight:900;">🔑 Llave App: GP9482716350492</span>
-                </div>
             </div>
             <button type="button" id="btnManageKeys" class="btn-surface" style="padding:6px 12px; font-size:11.5px;" onclick="openApiKeysModal()">
                 <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -155,7 +151,15 @@
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <span style="font-size:13px; font-weight:800; color:var(--brand-accent); display:inline-flex; align-items:center; gap:6px;">
                         <svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                        <span>Enlaces de Video / Servidores</span>
+                        <div style="margin:12px 0 16px; padding:12px; background:#121418; border:1px solid #232730; border-radius:10px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
+    <label for="fSubtitle" style="font-size:13px; font-weight:600; color:#E2E8F0;">Subtítulos Español (.vtt / .srt)</label>
+    <button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button>
+  </div>
+  <input id="fSubtitle" type="text" placeholder="https://... (.vtt o .srt) — opcional" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:8px; border:1px solid #2A303C; background:#0A0B0E; color:#F1F5F9; font-size:13px;">
+  <div id="subStatusMsg" style="font-size:11.5px; color:#8A94A6; margin-top:5px;"></div>
+</div>
+<span>Enlaces de Video / Servidores</span>
                     </span>
                     <button type="button" class="btn-cyan" style="padding:6px 12px; font-size:11.5px;" onclick="addServerInputRow('', '')">
                         <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -312,16 +316,8 @@
                             <option value="1">1 Portada</option>
                             <option value="3">3 Portadas</option>
                             <option value="5" selected>5 Portadas</option>
+                            <option value="7">7 Portadas</option>
                             <option value="10">10 Portadas</option>
-                        </select>
-                    </div>
-                    <div>
-                        <span class="field-label">Giro Automático (Segundos)</span>
-                        <select id="cfgHeroTimer" class="admin-input">
-                            <option value="0">Apagado</option>
-                            <option value="4000">Cada 4 segundos</option>
-                            <option value="6000" selected>Cada 6 segundos</option>
-                            <option value="8000">Cada 8 segundos</option>
                         </select>
                     </div>
                 </div>
@@ -353,13 +349,15 @@
         };
 
         function inferGithubRepoFromUrl() {
-            const owner = "alfajossems-prog";
-            const repo = "gatoplay-db";
-            localStorage.setItem("gh_owner", owner);
-            localStorage.setItem("gh_repo", repo);
-            if (!localStorage.getItem("gh_token")) {
-                localStorage.setItem("gh_token", (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join("")));
+            let owner = localStorage.getItem("gh_owner") || "";
+            let repo = localStorage.getItem("gh_repo") || "";
+            if (window.location.hostname.endsWith(".github.io")) {
+                if (!owner) owner = window.location.hostname.replace(".github.io", "");
+                const parts = window.location.pathname.split("/").filter(Boolean);
+                if (!repo && parts.length > 0) repo = parts[0];
             }
+            if (!owner) owner = "alfajossems-prog";
+            if (!repo) repo = "gatoplay-api";
             return { owner, repo };
         }
 
@@ -442,7 +440,6 @@
             if (currentDb.site_config) {
                 document.getElementById("cfgHeroMode").value = currentDb.site_config.hero_mode || "recent";
                 document.getElementById("cfgHeroCount").value = String(currentDb.site_config.hero_count || 5);
-                document.getElementById("cfgHeroTimer").value = String(currentDb.site_config.hero_timer !== undefined ? currentDb.site_config.hero_timer : 6000);
             }
             document.getElementById("heroSettingsModal").classList.remove("hidden");
         }
@@ -457,11 +454,27 @@
         }
 
         // SINCRONIZACIÓN DIRECTA CON GITHUB API (SI TIENE TOKEN) + SERVIDOR NODE LOCAL
-        async function pushSingleRepo(owner, repo, ghToken, jsonString) {
+        async function pushDatabaseToCloudAndServer() {
+            syncLocalCache();
+
+            // 1. Intentar guardar en el servidor Node local si está activo
+            try {
+                await fetch("/api/save-config", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(currentDb.site_config || {})
+                });
+            } catch (e) {}
+
+            // 2. Si el usuario tiene GitHub Token configurado, subir catalogo.json directo a su repo
+            const ghToken = localStorage.getItem("gh_token");
+            const { owner, repo } = inferGithubRepoFromUrl();
+            if (!ghToken || !owner || !repo) return true;
+
             try {
                 const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/catalogo.json`;
                 let sha = undefined;
-                const getRes = await fetch(apiUrl + "?t=" + Date.now(), {
+                const getRes = await fetch(apiUrl, {
                     headers: { "Authorization": `token ${ghToken}`, "Accept": "application/vnd.github.v3+json" },
                     cache: "no-store"
                 });
@@ -469,11 +482,8 @@
                     const existingFile = await getRes.json();
                     sha = existingFile.sha;
                 }
-                const utf8Bytes = new TextEncoder().encode(jsonString);
-                let bin = "";
-                utf8Bytes.forEach(b => bin += String.fromCharCode(b));
-                const contentBase64 = btoa(bin);
 
+                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(currentDb, null, 2))));
                 const putRes = await fetch(apiUrl, {
                     method: "PUT",
                     headers: {
@@ -482,7 +492,7 @@
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        message: "Sincronizacion automatica Gato Play (Llave GP9482716350492)",
+                        message: "Actualizacion desde Gato CMS",
                         content: contentBase64,
                         sha
                     })
@@ -491,18 +501,6 @@
             } catch (e) {
                 return false;
             }
-        }
-
-        async function pushDatabaseToCloudAndServer() {
-            syncLocalCache();
-            const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
-            const jsonStr = JSON.stringify(currentDb, null, 2);
-            // Guardar simultáneamente en GatoPlay (Web) y gatoplay-db (Nube APK) para que jamás estén desincronizados
-            await Promise.all([
-                pushSingleRepo("alfajossems-prog", "GatoPlay", ghToken, jsonStr),
-                pushSingleRepo("alfajossems-prog", "gatoplay-db", ghToken, jsonStr)
-            ]);
-            return true;
         }
 
         // BUSCADOR EN VIVO TMDB (CON DEBOUNCE DE 300ms Y PALOMITA VERDE)
@@ -611,6 +609,8 @@
             document.getElementById("fGenres").value = d.genres || "Estreno";
             document.getElementById("fPoster").value = d.poster;
             document.getElementById("fBackdrop").value = d.backdrop;
+      window.__lastTmdbId = d.tmdb_id || d.id || "";
+      if (document.getElementById("fSubtitle")) { document.getElementById("fSubtitle").value = ""; buscarSubtituloWyzie(window.__lastTmdbId); }
             document.getElementById("fSynopsis").value = d.synopsis;
             document.getElementById("fFeatured").checked = false;
 
@@ -780,6 +780,7 @@
                 genres: document.getElementById("fGenres").value.split(",").map(s => s.trim()).filter(Boolean),
                 poster: document.getElementById("fPoster").value.trim(),
                 backdrop: document.getElementById("fBackdrop").value.trim() || document.getElementById("fPoster").value.trim(),
+        subtitle: (document.getElementById("fSubtitle") ? document.getElementById("fSubtitle").value.trim() : ""),
                 synopsis: document.getElementById("fSynopsis").value.trim()
             };
 
@@ -840,6 +841,7 @@
             document.getElementById("fGenres").value = (item.genres || []).join(", ");
             document.getElementById("fPoster").value = item.poster || "";
             document.getElementById("fBackdrop").value = item.backdrop || "";
+      if (document.getElementById("fSubtitle")) document.getElementById("fSubtitle").value = item.subtitle || "";
             document.getElementById("fSynopsis").value = item.synopsis || "";
             document.getElementById("fFeatured").checked = Boolean(item.featured);
 
@@ -884,58 +886,51 @@
         }
 
         async function loadCatalogAdmin() {
-        const ts = Date.now();
-        const ghToken = localStorage.getItem("gh_token") || (["gh","p_QIMuVwWmOxpl18xZhug","fnlsVARTcAa0P4a7j"].join(""));
-        if (!localStorage.getItem("gh_token")) localStorage.setItem("gh_token", ghToken);
+            const ts = Date.now();
+            const { owner, repo } = inferGithubRepoFromUrl();
+            const ghToken = localStorage.getItem("gh_token");
 
-        let loadedData = null;
-        const masterUrl = "https://api.github.com/repos/alfajossems-prog/gatoplay-db/contents/catalogo.json?t=" + ts;
-        const backupUrl = "https://api.github.com/repos/alfajossems-prog/GatoPlay/contents/catalogo.json?t=" + ts;
+            const urls = [
+                `https://api.github.com/repos/${owner}/${repo}/contents/catalogo.json?t=${ts}`,
+                `https://raw.githubusercontent.com/${owner}/${repo}/main/catalogo.json?t=${ts}`,
+                `./catalogo.json?t=${ts}`,
+                `/api/catalogo.json?t=${ts}`
+            ];
 
-        try {
-            const r = await fetch(masterUrl, { headers: { "Authorization": "token " + ghToken, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
-            if (r.ok) {
-                let data = await r.json();
-                if (data.content && data.encoding === "base64") {
-                    data = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), m => m.codePointAt(0))));
-                }
-                loadedData = data;
-            }
-        } catch(e) {}
-
-        // Solo usar el backup si el master falló por completo
-        if (!loadedData) {
-            try {
-                const r = await fetch(backupUrl, { headers: { "Authorization": "token " + ghToken, "Accept": "application/vnd.github.v3+json" }, cache: "no-store" });
-                if (r.ok) {
-                    let data = await r.json();
-                    if (data.content && data.encoding === "base64") {
-                        data = JSON.parse(new TextDecoder("utf-8").decode(Uint8Array.from(atob(data.content.replace(/\s/g, "")), m => m.codePointAt(0))));
-                    }
-                    loadedData = data;
-                }
-            } catch(e) {}
-        }
-
-        if (loadedData) {
-            currentDb = Array.isArray(loadedData)
-                ? { site_config: { hero_mode: "recent", hero_count: 5 }, items: loadedData }
-                : Object.assign({ site_config: { hero_mode: "recent", hero_count: 5 } }, loadedData, { items: loadedData.items || [] });
-        } else {
-            const cached = localStorage.getItem("gatoplay_catalog_db");
-            if (cached) {
+            for (const u of urls) {
                 try {
-                    const parsed = JSON.parse(cached);
-                    currentDb = Array.isArray(parsed) ? { site_config: { hero_mode: "recent", hero_count: 5 }, items: parsed } : parsed;
-                } catch(e) {}
+                    const headers = {};
+                    if (u.includes("api.github.com") && ghToken) {
+                        headers["Authorization"] = `token ${ghToken}`;
+                    }
+                    const r = await fetch(u, { cache: "no-store", headers });
+                    if (!r.ok) continue;
+                    let data = await r.json();
+                    if (data && data.content && data.encoding === "base64") {
+                        const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ""))));
+                        data = JSON.parse(decoded);
+                    }
+                    const items = Array.isArray(data) ? data : (data.items || data.movies || []);
+                    if (items.length > 0 || !currentDb.items.length) {
+                        currentDb = Array.isArray(data)
+                            ? { site_config: { hero_mode: "recent", hero_count: 5 }, items: data }
+                            : data;
+                        syncLocalCache();
+                        if (items.length > 0) break;
+                    }
+                } catch (e) {}
             }
-        }
 
-        if (!currentDb.items) currentDb.items = [];
-        syncLocalCache();
-        renderAdminList();
-        updateApiKeysStatusUI();
-    }
+            if (!currentDb.items || !currentDb.items.length) {
+                const cached = localStorage.getItem(STORAGE_KEY);
+                if (cached) {
+                    try { currentDb = JSON.parse(cached); } catch (e) {}
+                }
+            }
+
+            renderAdminList();
+            updateApiKeysStatusUI();
+        }
 
         function renderAdminList() {
             const allItems = currentDb.items || [];
@@ -975,26 +970,24 @@
         }
 
         async function deleteCatalogItem(id) {
-        if (!confirm("¿Eliminar definitivamente este título del catálogo?")) return;
-        const targetId = String(id).trim();
-        
-        // Eliminar del array local de inmediato
-        currentDb.items = (currentDb.items || []).filter(i => String(i.id).trim() !== targetId);
-        renderAdminList();
-        
-        // Subir los cambios a la nube
-        const success = await pushDatabaseToCloudAndServer();
-        if (!success) alert("Hubo un problema al borrar de la nube. Verifica tu conexión.");
-        
-        const currentQ = document.getElementById("tmdbQuery").value.trim();
-        if (currentQ.length >= 2) searchTmdb(currentQ);
-    }
+            if (!confirm("¿Eliminar este título del catálogo?")) return;
+            currentDb.items = (currentDb.items || []).filter(i => String(i.id) !== String(id));
+
+            try {
+                await fetch("/api/delete-item/" + encodeURIComponent(id), { method: "DELETE" });
+            } catch (e) {}
+
+            await pushDatabaseToCloudAndServer();
+            renderAdminList();
+
+            const currentQ = document.getElementById("tmdbQuery").value.trim();
+            if (currentQ.length >= 2) searchTmdb(currentQ);
+        }
 
         async function saveHeroConfig() {
             const hero_mode = document.getElementById("cfgHeroMode").value;
             const hero_count = Number(document.getElementById("cfgHeroCount").value || 5);
-            const hero_timer = Number(document.getElementById("cfgHeroTimer").value || 6000);
-            currentDb.site_config = Object.assign(currentDb.site_config || {}, { hero_mode, hero_count, hero_timer });
+            currentDb.site_config = Object.assign(currentDb.site_config || {}, { hero_mode, hero_count });
             await pushDatabaseToCloudAndServer();
             closeHeroSettingsModal();
         }
@@ -1024,5 +1017,37 @@
             }[s]));
         }
     </script>
+
+<script>
+window.__lastTmdbId = "";
+async function buscarSubtituloWyzie(tmdbId) {
+  const id = tmdbId || window.__lastTmdbId || "";
+  const input = document.getElementById("fSubtitle");
+  const msg = document.getElementById("subStatusMsg");
+  if (!input || !msg) return;
+  if (!id) {
+    msg.textContent = "Selecciona primero un título de TMDB para buscar subtítulos.";
+    return;
+  }
+  msg.textContent = "Buscando subtítulos en español (Wyzie Subs)...";
+  try {
+    const res = await fetch("https://sub.wyzie.ru/search?id=" + encodeURIComponent(id) + "&language=es");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) {
+      const best = data.find(s => (s.url || "").toLowerCase().includes(".vtt")) || data[0];
+      if (best && best.url) {
+        input.value = best.url;
+        msg.textContent = "✅ Subtítulo encontrado (" + (best.display || "Español") + ")";
+        return;
+      }
+    }
+    msg.textContent = "No se encontraron subtítulos automáticos. Puedes pegar uno manual.";
+  } catch (e) {
+    msg.textContent = "No se pudo consultar Wyzie Subs (" + e.message + ").";
+  }
+}
+</script>
+
 </body>
 </html>
