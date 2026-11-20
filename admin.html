@@ -1025,50 +1025,66 @@ function getTmdbKeyForSubs() {
   try {
     if (typeof TMDB_API_KEY !== "undefined" && TMDB_API_KEY) return TMDB_API_KEY;
     if (typeof TMDB_KEY !== "undefined" && TMDB_KEY) return TMDB_KEY;
-    const keys = ["tmdb_api_key", "tmdbKey", "gato_tmdb_key", "TMDB_API_KEY", "tmdb_key"];
-    for (const k of keys) {
-      const v = localStorage.getItem(k);
-      if (v && v.trim().length > 10) return v.trim();
+    const inp = document.querySelector('#apiKeysModal input[id*="tmdb" i], #apiKeysModal input[placeholder*="TMDB" i], #apiKeysModal input');
+    if (inp && /^[a-f0-9]{32}$/i.test(inp.value.trim())) return inp.value.trim();
+    for (let i = 0; i < localStorage.length; i++) {
+      const val = (localStorage.getItem(localStorage.key(i)) || "").trim();
+      if (/^[a-f0-9]{32}$/i.test(val)) return val;
     }
-    const inp = document.querySelector('#apiKeysModal input[id*="tmdb" i], #apiKeysModal input[placeholder*="TMDB" i]');
-    if (inp && inp.value.trim().length > 10) return inp.value.trim();
   } catch (e) {}
   return "";
 }
 
+async function fetchImdbFromTmdb(tmdbNumId, mediaType, tmdbKey) {
+  const endpoint = mediaType === "tv" ? "tv" : "movie";
+  const r = await fetch("https://api.themoviedb.org/3/" + endpoint + "/" + encodeURIComponent(tmdbNumId) + "/external_ids?api_key=" + encodeURIComponent(tmdbKey));
+  if (!r.ok) return "";
+  const data = await r.json();
+  return (data && data.imdb_id) ? data.imdb_id : "";
+}
+
 async function buscarSubtituloWyzie(tmdbId) {
-  const id = String(tmdbId || window.__lastTmdbId || "").trim();
   const input = document.getElementById("fSubtitle");
   const msg = document.getElementById("subStatusMsg");
   if (!input || !msg) return;
-  if (!id) {
-    msg.textContent = "Selecciona primero un título de TMDB para buscar subtítulos.";
+
+  const tmdbKey = getTmdbKeyForSubs();
+  if (!tmdbKey) {
+    msg.textContent = "Falta la clave API de TMDB en Configurar Claves API.";
     return;
   }
 
   msg.textContent = "Buscando subtítulos en español (OpenSubtitles)...";
   try {
-    let imdbId = id.startsWith("tt") ? id : "";
+    let rawId = String(tmdbId || window.__lastTmdbId || "").trim();
+    let imdbId = rawId.startsWith("tt") ? rawId : "";
     let mediaType = "movie";
 
-    if (!imdbId) {
-      const tmdbKey = getTmdbKeyForSubs();
-      if (!tmdbKey) {
-        msg.textContent = "Falta la llave de TMDB en configuración para obtener el IMDb ID.";
-        return;
-      }
-      // Intentar como película y si no trae imdb_id, intentar como serie
-      let extRes = await fetch("https://api.themoviedb.org/3/movie/" + encodeURIComponent(id) + "/external_ids?api_key=" + encodeURIComponent(tmdbKey));
-      let extData = extRes.ok ? await extRes.json() : null;
-      if (extData && extData.imdb_id) {
-        imdbId = extData.imdb_id;
+    const numMatch = rawId.match(/\d+/);
+    const numId = (numMatch && numMatch[0].length <= 9) ? numMatch[0] : "";
+
+    if (!imdbId && numId) {
+      imdbId = await fetchImdbFromTmdb(numId, "movie", tmdbKey);
+      if (imdbId) {
         mediaType = "movie";
       } else {
-        extRes = await fetch("https://api.themoviedb.org/3/tv/" + encodeURIComponent(id) + "/external_ids?api_key=" + encodeURIComponent(tmdbKey));
-        extData = extRes.ok ? await extRes.json() : null;
-        if (extData && extData.imdb_id) {
-          imdbId = extData.imdb_id;
-          mediaType = "series";
+        imdbId = await fetchImdbFromTmdb(numId, "tv", tmdbKey);
+        if (imdbId) mediaType = "series";
+      }
+    }
+
+    if (!imdbId) {
+      const titleEl = document.getElementById("fTitle") || document.querySelector('input[placeholder*="Título" i]');
+      const title = titleEl ? titleEl.value.trim() : "";
+      if (title) {
+        const sRes = await fetch("https://api.themoviedb.org/3/search/multi?api_key=" + encodeURIComponent(tmdbKey) + "&language=es-MX&query=" + encodeURIComponent(title));
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const hit = (sData.results || []).find(x => x.media_type === "movie" || x.media_type === "tv");
+          if (hit && hit.id) {
+            mediaType = hit.media_type === "tv" ? "series" : "movie";
+            imdbId = await fetchImdbFromTmdb(hit.id, hit.media_type, tmdbKey);
+          }
         }
       }
     }
@@ -1078,16 +1094,15 @@ async function buscarSubtituloWyzie(tmdbId) {
       return;
     }
 
-    const endpoint = mediaType === "series"
+    const osEndpoint = mediaType === "series"
       ? "https://opensubtitles-v3.strem.io/subtitles/series/" + encodeURIComponent(imdbId) + ":1:1.json"
       : "https://opensubtitles-v3.strem.io/subtitles/movie/" + encodeURIComponent(imdbId) + ".json";
 
-    const subRes = await fetch(endpoint);
+    const subRes = await fetch(osEndpoint);
     if (!subRes.ok) throw new Error("HTTP " + subRes.status);
     const subData = await subRes.json();
     const list = (subData && Array.isArray(subData.subtitles)) ? subData.subtitles : [];
 
-    // Filtrar español (spa / es)
     const esSubs = list.filter(s => {
       const l = (s.lang || "").toLowerCase();
       return l === "spa" || l === "es" || l.startsWith("es-") || l.includes("spanish");
@@ -1095,9 +1110,9 @@ async function buscarSubtituloWyzie(tmdbId) {
 
     if (esSubs.length > 0 && esSubs[0].url) {
       input.value = esSubs[0].url;
-      msg.textContent = "✅ Subtítulo encontrado (OpenSubtitles Español)";
+      msg.textContent = "✅ Subtítulo encontrado (" + imdbId + " • Español)";
     } else {
-      msg.textContent = "No hay subtítulos en español disponibles para este título.";
+      msg.textContent = "No hay subtítulos en español en OpenSubtitles para " + imdbId + ".";
     }
   } catch (e) {
     msg.textContent = "Error al buscar subtítulos (" + e.message + ").";
