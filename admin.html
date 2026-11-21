@@ -189,17 +189,17 @@
                         <input type="text" id="epSubtitleUrl" class="admin-input" placeholder="https://... (.vtt o .srt) — opcional">
                     </div>
                 </div>
-                <button type="button" class="btn-surface" style="width:100%;" onclick="addEpisodeToDraft()">
+                <button id="btnAddEpDraft" type="button" class="btn-surface" style="width:100%;" onclick="addEpisodeToDraft()">
                     <svg class="ico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    <span>Añadir Capítulo</span>
+                    <span id="epSubmitLabel">Añadir Capítulo</span>
                 </button>
                 <div id="draftEpisodesPreview" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
             </div>
 
             <div style="margin-top:16px; display:flex; flex-direction:column; gap:8px;">
-                <div style="width:100%; box-sizing:border-box; margin:14px 0 14px; padding:12px; background:#121418; border:1px solid #232730; border-radius:10px;">
+                <div id="movieSubtitleBox" style="width:100%; box-sizing:border-box; margin:14px 0 14px; padding:12px; background:#121418; border:1px solid #232730; border-radius:10px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
-    <label for="fSubtitle" style="font-size:13px; font-weight:600; color:#E2E8F0;">Subtítulos Español (.vtt / .srt)</label>
+    <label for="fSubtitle" style="font-size:13px; font-weight:600; color:#E2E8F0;">Subtítulos de la Película (.vtt / .srt)</label>
     <button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button>
   </div>
   <input id="fSubtitle" type="text" placeholder="https://... (.vtt o .srt) — opcional" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:8px; border:1px solid #2A303C; background:#0A0B0E; color:#F1F5F9; font-size:13px;">
@@ -1267,6 +1267,91 @@ function editarCapituloDraft(sNum, eNum) {
         alert("Error cargando capítulo: " + e.message);
     }
 }
+
+
+// === UX CONTEXTUAL SERIES VS PELICULAS ===
+function syncSubtitleBoxByType() {
+    const movieSubBox = document.getElementById("movieSubtitleBox");
+    if (!movieSubBox) return;
+
+    const typeEl = document.getElementById("fType") || document.querySelector('select[name="type"]');
+    const epInput = document.getElementById("epSeasonNum");
+
+    let isSeries = false;
+    if (typeEl && String(typeEl.value).toLowerCase() === "series") {
+        isSeries = true;
+    } else if (epInput && epInput.offsetParent !== null) {
+        isSeries = true;
+    }
+
+    movieSubBox.style.display = isSeries ? "none" : "block";
+}
+
+function setEpisodeComposerMode(isEditing, sNum, eNum) {
+    const btn = document.getElementById("btnAddEpDraft");
+    const lbl = document.getElementById("epSubmitLabel");
+    if (!btn || !lbl) return;
+
+    if (isEditing) {
+        lbl.textContent = `Guardar cambios (T${sNum} • Cap ${eNum})`;
+        btn.style.background = "#0E5A6F";
+        btn.style.borderColor = "#14748E";
+        btn.style.color = "#FFFFFF";
+    } else {
+        lbl.textContent = "Añadir Capítulo";
+        btn.style.background = "";
+        btn.style.borderColor = "";
+        btn.style.color = "";
+    }
+}
+
+(function initSeriesUxHooks() {
+    // Envolver editarCapituloDraft para activar el botón en modo edición
+    if (typeof window.editarCapituloDraft === "function") {
+        const origEdit = window.editarCapituloDraft;
+        window.editarCapituloDraft = function(sNum, eNum) {
+            origEdit(sNum, eNum);
+            setEpisodeComposerMode(true, sNum, eNum);
+        };
+    }
+
+    // Envolver addEpisodeToDraft para restaurar el botón al guardar
+    if (typeof window.addEpisodeToDraft === "function") {
+        const origAdd = window.addEpisodeToDraft;
+        window.addEpisodeToDraft = function() {
+            const res = origAdd.apply(this, arguments);
+            setEpisodeComposerMode(false);
+            return res;
+        };
+    }
+
+    const bindObservers = () => {
+        syncSubtitleBoxByType();
+        const typeEl = document.getElementById("fType") || document.querySelector('select[name="type"]');
+        if (typeEl) {
+            typeEl.addEventListener("change", () => {
+                setEpisodeComposerMode(false);
+                syncSubtitleBoxByType();
+            });
+        }
+        const epInput = document.getElementById("epSeasonNum");
+        const seriesSection = epInput ? epInput.closest("[id]") || epInput.parentElement?.parentElement : null;
+        if (seriesSection && typeof MutationObserver !== "undefined") {
+            new MutationObserver(syncSubtitleBoxByType).observe(seriesSection, {
+                attributes: true,
+                attributeFilter: ["class", "style"]
+            });
+        }
+        // Respaldo al abrir cualquier título existente en modo edición
+        document.addEventListener("click", () => setTimeout(syncSubtitleBoxByType, 60));
+    };
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", bindObservers);
+    } else {
+        bindObservers();
+    }
+})();
 
 </script>
 
