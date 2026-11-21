@@ -5,6 +5,112 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gato CMS - Studio Panel</title>
     <link rel="stylesheet" href="styles.css">
+<style>
+
+/* === GATO CMS UX PRO === */
+.admin-input::placeholder,
+textarea.admin-input::placeholder {
+    color: rgba(148, 163, 184, 0.42) !important;
+    opacity: 1;
+}
+
+#draftEpisodesPreview > div {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border: 1px solid rgba(16, 185, 129, 0.32) !important;
+    border-left: 3px solid #10b981 !important;
+}
+
+#editingStickyBar {
+    position: fixed;
+    top: 62px;
+    left: 50%;
+    transform: translate(-50%, -18px);
+    width: calc(100% - 24px);
+    max-width: 540px;
+    z-index: 950;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: rgba(18, 20, 24, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid #232730;
+    border-left: 3px solid #14748E;
+    border-radius: 12px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#editingStickyBar.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+}
+#editingStickyPoster {
+    width: 32px;
+    height: 46px;
+    object-fit: cover;
+    border-radius: 6px;
+    background: #0A0B0E;
+    border: 1px solid #232730;
+    flex-shrink: 0;
+}
+.sticky-meta { min-width: 0; flex: 1; }
+.sticky-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #14748E;
+}
+#editingStickyTitle {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#editingStickyTopBtn {
+    background: #181B22;
+    color: #cbd5e1;
+    border: 1px solid #232730;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+#deleteConfirmModal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+#deleteConfirmModal.open { display: flex; }
+.del-modal-card {
+    width: 100%;
+    max-width: 380px;
+    background: #121418;
+    border: 1px solid #232730;
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.65);
+}
+.del-modal-title { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #f8fafc; }
+.del-modal-desc { margin: 0 0 16px; font-size: 13px; line-height: 1.5; color: #94a3b8; }
+.del-modal-actions { display: flex; gap: 8px; }
+
+</style>
 </head>
 <body style="padding-top: 66px;">
 
@@ -211,7 +317,7 @@
                 </button>
                 <div style="display:flex; gap:8px;">
                     <button type="button" class="btn-surface" style="flex:1;" onclick="closeFormEditor()">Cancelar</button>
-                    <button type="button" id="btnDeleteFromForm" class="btn-danger hidden" style="flex:1;" onclick="deleteCurrentFormItem()">
+                    <button type="button" id="btnDeleteFromForm" class="btn-danger hidden" style="flex:1;" onclick="openDeleteConfirmModal()">
                         <svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         <span>Eliminar Título</span>
                     </button>
@@ -1353,7 +1459,89 @@ function setEpisodeComposerMode(isEditing, sNum, eNum) {
     }
 })();
 
+
+// === GATO CMS UX PRO: CONFIRMACION Y BARRA FLOTANTE ===
+function openDeleteConfirmModal() {
+    const title = (document.getElementById("fTitle")?.value || "").trim() || "este título";
+    const nameEl = document.getElementById("delModalItemName");
+    if (nameEl) nameEl.textContent = `"${title}"`;
+    document.getElementById("deleteConfirmModal")?.classList.add("open");
+}
+
+function closeDeleteConfirmModal() {
+    document.getElementById("deleteConfirmModal")?.classList.remove("open");
+}
+
+function confirmDeleteCurrentTitle() {
+    closeDeleteConfirmModal();
+    if (typeof deleteCurrentFormItem === "function") {
+        deleteCurrentFormItem();
+    }
+}
+
+function updateEditingStickyBar() {
+    const bar = document.getElementById("editingStickyBar");
+    const titleInput = document.getElementById("fTitle");
+    const posterInput = document.getElementById("fPoster");
+    if (!bar || !titleInput) return;
+
+    const titleVal = (titleInput.value || "").trim();
+    const posterVal = (posterInput?.value || "").trim();
+    const formVisible = titleInput.offsetParent !== null;
+
+    if (!formVisible || !titleVal || window.scrollY < 220) {
+        bar.classList.remove("visible");
+        return;
+    }
+
+    const titleEl = document.getElementById("editingStickyTitle");
+    const posterEl = document.getElementById("editingStickyPoster");
+    if (titleEl) titleEl.textContent = titleVal;
+    if (posterEl) {
+        if (posterVal) {
+            posterEl.src = posterVal;
+            posterEl.style.display = "block";
+        } else {
+            posterEl.style.display = "none";
+        }
+    }
+    bar.classList.add("visible");
+}
+
+window.addEventListener("scroll", updateEditingStickyBar, { passive: true });
+document.addEventListener("input", (e) => {
+    if (e.target && (e.target.id === "fTitle" || e.target.id === "fPoster")) {
+        updateEditingStickyBar();
+    }
+});
+document.getElementById("deleteConfirmModal")?.addEventListener("click", (e) => {
+    if (e.target.id === "deleteConfirmModal") closeDeleteConfirmModal();
+});
+
 </script>
+
+
+<!-- BARRA FLOTANTE DE TITULO EN EDICION -->
+<div id="editingStickyBar" aria-hidden="true">
+    <img id="editingStickyPoster" src="" alt="Portada">
+    <div class="sticky-meta">
+        <div class="sticky-kicker">Editando título</div>
+        <div id="editingStickyTitle">Sin título</div>
+    </div>
+    <button type="button" id="editingStickyTopBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINACION -->
+<div id="deleteConfirmModal" role="dialog" aria-modal="true">
+    <div class="del-modal-card">
+        <h4 class="del-modal-title">¿Eliminar este título?</h4>
+        <p class="del-modal-desc">Se borrará <strong id="delModalItemName" style="color:#f1f5f9;"></strong> del catálogo en la nube. Esta acción no se puede deshacer.</p>
+        <div class="del-modal-actions">
+            <button type="button" class="btn-surface" style="flex:1;" onclick="closeDeleteConfirmModal()">Cancelar</button>
+            <button type="button" class="btn-danger" style="flex:1;" onclick="confirmDeleteCurrentTitle()">Sí, eliminar</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
