@@ -281,7 +281,8 @@ async function handleGatoCmsLogin(ev) {
                 </a>
             </div>
         </div>
-    </header>
+        <button type="button" id="btnCmsLogout" onclick="logoutGatoCms()" title="Cerrar Sesión" style="background:#1c1417; color:#f87171; border:1px solid rgba(248,113,113,0.35); border-radius:999px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; margin-left:6px;">Salir</button>
+</header>
 
     <div class="admin-container">
 
@@ -1667,6 +1668,72 @@ document.addEventListener("input", (e) => {
 document.getElementById("deleteConfirmModal")?.addEventListener("click", (e) => {
     if (e.target.id === "deleteConfirmModal") closeDeleteConfirmModal();
 });
+
+
+// === GATO CMS SECURITY PRO ===
+const CMS_FAIL_KEY = "gato_cms_fail_count";
+const CMS_LOCK_KEY = "gato_cms_lock_until";
+
+function isGatoCmsSessionValid() {
+    const exp = Number(localStorage.getItem("gato_cms_auth_exp") || 0);
+    const saved = localStorage.getItem("gato_cms_auth_hash") || "";
+    return Boolean(saved && Date.now() < exp);
+}
+
+function logoutGatoCms() {
+    localStorage.removeItem("gato_cms_auth_hash");
+    localStorage.removeItem("gato_cms_auth_exp");
+    location.reload();
+}
+
+// Envolver handleGatoCmsLogin con bloqueo anti fuerza bruta (5 intentos = 5 min)
+(function wrapLoginSecurity() {
+    const origLogin = window.handleGatoCmsLogin;
+    if (typeof origLogin !== "function") return;
+
+    window.handleGatoCmsLogin = async function(ev) {
+        ev.preventDefault();
+        const errEl = document.getElementById("cmsLoginErr");
+        const lockUntil = Number(localStorage.getItem(CMS_LOCK_KEY) || 0);
+
+        if (Date.now() < lockUntil) {
+            const mins = Math.ceil((lockUntil - Date.now()) / 60000);
+            if (errEl) errEl.textContent = `Demasiados intentos. Espera ${mins} min.`;
+            return false;
+        }
+
+        await origLogin(ev);
+
+        if (isGatoCmsSessionValid()) {
+            localStorage.removeItem(CMS_FAIL_KEY);
+            localStorage.removeItem(CMS_LOCK_KEY);
+        } else {
+            const fails = Number(localStorage.getItem(CMS_FAIL_KEY) || 0) + 1;
+            localStorage.setItem(CMS_FAIL_KEY, String(fails));
+            if (fails >= 5) {
+                localStorage.setItem(CMS_LOCK_KEY, String(Date.now() + 5 * 60 * 1000));
+                localStorage.setItem(CMS_FAIL_KEY, "0");
+                if (errEl) errEl.textContent = "Bloqueado 5 minutos por demasiados intentos.";
+            } else if (errEl) {
+                errEl.textContent = `Datos incorrectos (${fails}/5 intentos).`;
+            }
+        }
+        return false;
+    };
+
+    // Vigilante anti-tampering: si borran u ocultan el modal desde DevTools sin sesión válida, recarga
+    const gate = document.getElementById("gatoCmsLoginGate");
+    if (gate && typeof MutationObserver !== "undefined") {
+        const guard = () => {
+            if (isGatoCmsSessionValid()) return;
+            const el = document.getElementById("gatoCmsLoginGate");
+            if (!el || el.classList.contains("unlocked") || getComputedStyle(el).display === "none") {
+                location.reload();
+            }
+        };
+        new MutationObserver(guard).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
+    }
+})();
 
 </script>
 
