@@ -181,6 +181,13 @@
                         <span class="field-label">Enlace de Video (Streamtape / MP4)</span>
                         <input type="text" id="epServerUrl" class="admin-input" placeholder="https://streamtape.com/e/... o .mp4">
                     </div>
+                    <div class="form-full">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px;">
+                            <span class="field-label" style="margin:0;">Subtítulo del Capítulo (.vtt / .srt)</span>
+                            <button type="button" id="btnAutoEpSub" onclick="buscarSubtituloCapituloForm()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:7px; padding:4px 10px; font-size:11.5px; font-weight:600; cursor:pointer;">Buscar auto</button>
+                        </div>
+                        <input type="text" id="epSubtitleUrl" class="admin-input" placeholder="https://... (.vtt o .srt) — opcional">
+                    </div>
                 </div>
                 <button type="button" class="btn-surface" style="width:100%;" onclick="addEpisodeToDraft()">
                     <svg class="ico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -612,6 +619,9 @@
       window.__lastTmdbId = d.tmdb_id || d.id || "";
       if (document.getElementById("fSubtitle")) { document.getElementById("fSubtitle").value = ""; buscarSubtituloWyzie(window.__lastTmdbId); }
             document.getElementById("fSynopsis").value = d.synopsis;
+        const _fSub = document.getElementById("fSubtitle");
+        if (_fSub) _fSub.value = (d.subtitle || "").trim();
+        document.querySelectorAll("[id*=subStatus i],[id*=subtitleStatus i]").forEach(el => el.textContent = "");
             document.getElementById("fFeatured").checked = false;
 
             resetServersUI();
@@ -710,6 +720,7 @@
             const eNum = Number(document.getElementById("epNum").value || 1);
             const eTitle = document.getElementById("epTitle").value.trim() || `Episodio ${eNum}`;
             const eUrl = document.getElementById("epServerUrl").value.trim();
+            const eSub = (document.getElementById("epSubtitleUrl")?.value || "").trim();
 
             if (!eUrl) return alert("Coloca el enlace del capítulo.");
 
@@ -718,6 +729,7 @@
                 episode_number: eNum,
                 title: eTitle,
                 duration: "45 min",
+                subtitle: eSub,
                 servers: [{ name: "Streamtape", quality: "1080p", format: "MP4", url: eUrl }]
             };
 
@@ -731,6 +743,7 @@
             document.getElementById("epNum").value = eNum + 1;
             document.getElementById("epTitle").value = "";
             document.getElementById("epServerUrl").value = "";
+            if (document.getElementById("epSubtitleUrl")) document.getElementById("epSubtitleUrl").value = "";
             renderDraftEpisodes();
         }
 
@@ -741,18 +754,120 @@
             renderDraftEpisodes();
         }
 
+        function toggleEpSubEditor(sNum, eNum) {
+            const el = document.getElementById(`epSubEditor_${sNum}_${eNum}`);
+            if (el) el.style.display = (el.style.display === "none" || !el.style.display) ? "flex" : "none";
+        }
+
+        function updateDraftEpSubtitle(sNum, eNum, val) {
+            const list = draftSeasonsMap[sNum] || [];
+            const ep = list.find(x => Number(x.episode_number) === Number(eNum));
+            if (!ep) return;
+            ep.subtitle = (val || "").trim();
+            renderDraftEpisodes();
+        }
+
+        async function obtenerImdbIdSerie() {
+            const tmdbKey = localStorage.getItem("gato_tmdb_key") || localStorage.getItem("tmdb_api_key") || "";
+            if (!tmdbKey) {
+                alert("Configura tu clave API de TMDB primero en el botón de Llaves.");
+                return "";
+            }
+            const rawId = (document.getElementById("fId")?.value || "").trim();
+            let tmdbId = rawId.replace(/^tmdb_/i, "");
+            if (!/^\d+$/.test(tmdbId)) {
+                const title = (document.getElementById("fTitle")?.value || "").trim();
+                if (!title) return "";
+                const sr = await fetch(`https://api.themoviedb.org/3/search/tv?api_key=${encodeURIComponent(tmdbKey)}&query=${encodeURIComponent(title)}&language=es-MX`);
+                const sd = await sr.json();
+                tmdbId = sd?.results?.[0]?.id ? String(sd.results[0].id) : "";
+            }
+            if (!tmdbId) return "";
+            const extRes = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}/external_ids?api_key=${encodeURIComponent(tmdbKey)}`);
+            const extData = await extRes.json();
+            return extData?.imdb_id || "";
+        }
+
+        async function buscarSubOpenSubtitlesEpisodio(sNum, eNum) {
+            const imdbId = await obtenerImdbIdSerie();
+            if (!imdbId) {
+                alert("No se encontró el IMDb ID de la serie en TMDB.");
+                return "";
+            }
+            const res = await fetch(`https://opensubtitles-v3.strem.io/subtitles/series/${imdbId}:${sNum}:${eNum}.json`);
+            if (!res.ok) throw new Error("OpenSubtitles no respondió");
+            const data = await res.json();
+            const subs = Array.isArray(data?.subtitles) ? data.subtitles : [];
+            const esSub = subs.find(s => /^(spa|es|es-mx|es-es)$/i.test(String(s.lang || "")))
+                       || subs.find(s => String(s.lang || "").toLowerCase().includes("es"));
+            return esSub?.url || "";
+        }
+
+        async function buscarSubtituloCapituloForm() {
+            const btn = document.getElementById("btnAutoEpSub");
+            const input = document.getElementById("epSubtitleUrl");
+            const sNum = Number(document.getElementById("epSeasonNum")?.value || 1);
+            const eNum = Number(document.getElementById("epNum")?.value || 1);
+            if (btn) { btn.disabled = true; btn.textContent = "Buscando..."; }
+            try {
+                const url = await buscarSubOpenSubtitlesEpisodio(sNum, eNum);
+                if (url) {
+                    if (input) input.value = url;
+                } else {
+                    alert(`No se encontraron subtítulos en español para T${sNum} • Cap ${eNum}.`);
+                }
+            } catch (err) {
+                alert("Error buscando subtítulo: " + err.message);
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = "Buscar auto"; }
+            }
+        }
+
+        async function buscarSubtituloEnTarjeta(sNum, eNum, btnEl) {
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = "..."; }
+            try {
+                const url = await buscarSubOpenSubtitlesEpisodio(sNum, eNum);
+                if (url) {
+                    updateDraftEpSubtitle(sNum, eNum, url);
+                } else {
+                    alert(`Sin subtítulos en español para T${sNum} • Cap ${eNum}.`);
+                }
+            } catch (err) {
+                alert("Error buscando subtítulo: " + err.message);
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.textContent = "Auto"; }
+            }
+        }
+
         function renderDraftEpisodes() {
             const box = document.getElementById("draftEpisodesPreview");
             const lines = [];
-            Object.keys(draftSeasonsMap).forEach(s => {
-                draftSeasonsMap[s].forEach(ep => {
+            Object.keys(draftSeasonsMap).sort((a, b) => Number(a) - Number(b)).forEach(s => {
+                draftSeasonsMap[s].sort((a, b) => Number(a.episode_number) - Number(b.episode_number)).forEach(ep => {
+                    const hasSub = !!(ep.subtitle && String(ep.subtitle).trim());
+                    const ccBadge = hasSub
+                        ? `<span style="background:rgba(20,116,142,0.22); color:#38bdf8; border:1px solid #14748E; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:700; white-space:nowrap;">CC ✓</span>`
+                        : `<span style="background:#181B22; color:#64748B; border:1px solid #232730; padding:2px 6px; border-radius:6px; font-size:10px; font-weight:600; white-space:nowrap;">Sin CC</span>`;
+                    const videoUrl = (ep.servers && ep.servers[0] && ep.servers[0].url) ? ep.servers[0].url : "";
                     lines.push(`
-                        <div class="ep-card">
-                            <div class="ep-meta">
-                                <h4>T${s} • Cap ${ep.episode_number}: ${escapeAttr(ep.title)}</h4>
-                                <p>${escapeAttr(ep.servers[0].url)}</p>
+                        <div class="ep-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; width:100%;">
+                                <div class="ep-meta" style="min-width:0; flex:1;">
+                                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                        <h4 style="margin:0;">T${s} • Cap ${ep.episode_number}: ${escapeAttr(ep.title)}</h4>
+                                        ${ccBadge}
+                                    </div>
+                                    <p style="margin:4px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeAttr(videoUrl)}</p>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                                    <button type="button" onclick="toggleEpSubEditor(${s}, ${ep.episode_number})" title="Subtítulo del capítulo" style="height:32px; padding:0 9px; border-radius:8px; border:1px solid ${hasSub ? '#14748E' : '#2A303C'}; background:${hasSub ? 'rgba(14,90,111,0.25)' : '#121418'}; color:${hasSub ? '#38bdf8' : '#CBD5E1'}; font-size:11px; font-weight:700; cursor:pointer;">CC</button>
+                                    <button type="button" class="btn-icon-sq del" onclick="removeDraftEpisode(${s}, ${ep.episode_number})">${SVG_TRASH}</button>
+                                </div>
                             </div>
-                            <button type="button" class="btn-icon-sq del" onclick="removeDraftEpisode(${s}, ${ep.episode_number})">${SVG_TRASH}</button>
+                            <div id="epSubEditor_${s}_${ep.episode_number}" style="display:none; gap:6px; align-items:center; padding-top:8px; border-top:1px solid #232730;">
+                                <input type="text" id="epSubInput_${s}_${ep.episode_number}" class="admin-input" value="${escapeAttr(ep.subtitle || "")}" placeholder="URL .srt / .vtt para T${s} Cap ${ep.episode_number}" style="flex:1; min-width:0; padding:7px 9px; font-size:12px;" onchange="updateDraftEpSubtitle(${s}, ${ep.episode_number}, this.value)">
+                                <button type="button" onclick="buscarSubtituloEnTarjeta(${s}, ${ep.episode_number}, this)" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:7px; padding:7px 10px; font-size:11.5px; font-weight:600; cursor:pointer; white-space:nowrap;">Auto</button>
+                            </div>
                         </div>
                     `);
                 });
@@ -843,6 +958,9 @@
             document.getElementById("fBackdrop").value = item.backdrop || "";
       if (document.getElementById("fSubtitle")) document.getElementById("fSubtitle").value = item.subtitle || "";
             document.getElementById("fSynopsis").value = item.synopsis || "";
+        const _fSub = document.getElementById("fSubtitle");
+        if (_fSub) _fSub.value = (item.subtitle || "").trim();
+        document.querySelectorAll("[id*=subStatus i],[id*=subtitleStatus i]").forEach(el => el.textContent = "");
             document.getElementById("fFeatured").checked = Boolean(item.featured);
 
             if (item.type === "series") {
@@ -870,6 +988,9 @@
             document.getElementById("fPoster").value = "";
             document.getElementById("fBackdrop").value = "";
             document.getElementById("fSynopsis").value = "";
+        const _fSubClr = document.getElementById("fSubtitle");
+        if (_fSubClr) _fSubClr.value = "";
+        document.querySelectorAll("[id*=subStatus i],[id*=subtitleStatus i]").forEach(el => el.textContent = "");
             document.getElementById("fFeatured").checked = false;
             resetServersUI();
             draftSeasonsMap = {};
