@@ -2091,32 +2091,74 @@ function renderCmsReportsList() {
     }
     box.innerHTML = __cmsReports.map(r => {
         const dt = r.date ? new Date(r.date).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" }) : "";
-        const safeId = String(r.itemId || "").replace(/'/g, "\'");
-        const safeTitle = String(r.title || "").replace(/'/g, "\'");
-        const safeRepId = String(r.id || "").replace(/'/g, "\'");
+        const safeId = String(r.itemId || "").replace(/'/g, "\\'");
+        const safeTitle = String(r.title || "").replace(/'/g, "\\'");
+        const safeRepId = String(r.id || "").replace(/'/g, "\\'");
+        const noteStr = String(r.note || "");
+        const isSync = r.type === "sync" || noteStr.startsWith("SYNC_OFFSET:");
+        let syncVal = 0;
+        if (isSync) {
+            const m = noteStr.match(/SYNC_OFFSET:([+-]?\d+(?:\.\d+)?)/);
+            if (m) syncVal = parseFloat(m[1]);
+        }
+        const primaryBtn = isSync
+            ? `<button type="button" onclick="applyCmsSyncReport('${safeRepId}', '${safeId}', '${safeTitle}', ${syncVal}, this)" style="flex:1; background:#0E7490; color:#fff; border:none; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer;">&#128190; Guardar Sync (${syncVal >= 0 ? "+" : ""}${syncVal}s)</button>`
+            : `<button type="button" onclick="fixReportedItem('${safeId}', '${safeTitle}')" style="flex:1; background:#14748E; color:#fff; border:none; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer;">&#128295; Arreglar</button>`;
+        const noteHtml = (!isSync && noteStr)
+            ? `<div style="font-size:12px; color:#CBD5E1; margin-bottom:8px;">Nota: ${noteStr}</div>`
+            : "";
         return `<div style="background:#0A0B0E; border:1px solid #232730; border-radius:12px; padding:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px;">
                 <strong style="font-size:14px; color:#F8FAFC;">${r.title || "Sin título"}</strong>
                 <span style="font-size:10px; color:#94A3B8;">${dt}</span>
             </div>
             <div style="font-size:12.5px; color:#38BDF8; font-weight:600; margin-bottom:4px;">${r.reason || ""}</div>
-            ${r.note ? `<div style="font-size:12px; color:#CBD5E1; margin-bottom:8px;">Nota: ${r.note}</div>` : ""}
+            ${noteHtml}
             <div style="display:flex; gap:8px; margin-top:8px;">
-                <button type="button" onclick="fixReportedItem('${safeId}', '${safeTitle}')" style="flex:1; background:#14748E; color:#fff; border:none; border-radius:8px; padding:8px; font-size:12px; font-weight:700; cursor:pointer;">&#128295; Arreglar</button>
+                ${primaryBtn}
                 <button type="button" onclick="resolveCmsReport('${safeRepId}')" style="background:#1A1E26; color:#4ADE80; border:1px solid #232730; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; cursor:pointer;">&#10003; Listo</button>
             </div>
         </div>`;
     }).join("");
 }
 
+function findCatalogItemForReport(itemId, title) {
+    const items = (typeof currentDb !== "undefined" && Array.isArray(currentDb.items))
+        ? currentDb.items
+        : (typeof catalog !== "undefined" && Array.isArray(catalog) ? catalog : []);
+    const cleanTitle = String(title || "").trim().toLowerCase();
+    return items.find(i => itemId && String(i.id) === String(itemId))
+        || items.find(i => String(i.title || "").trim().toLowerCase() === cleanTitle)
+        || items.find(i => cleanTitle && cleanTitle.startsWith(String(i.title || "").trim().toLowerCase()));
+}
+
+async function applyCmsSyncReport(repId, itemId, title, offsetVal, btn) {
+    const found = findCatalogItemForReport(itemId, title);
+    if (!found) {
+        alert("No se encontró '" + title + "' en el catálogo cargado.");
+        return;
+    }
+    const origText = btn ? btn.innerHTML : "";
+    if (btn) { btn.disabled = true; btn.textContent = "Guardando en GitHub..."; }
+    try {
+        found.subtitleOffset = Number(offsetVal);
+        if (typeof pushDatabaseToCloudAndServer === "function") {
+            await pushDatabaseToCloudAndServer();
+        }
+        if (typeof renderAdminList === "function") {
+            renderAdminList();
+        }
+        await resolveCmsReport(repId);
+    } catch (e) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        alert("Error al guardar la sincronización en GitHub.");
+    }
+}
+
 function fixReportedItem(itemId, title) {
     closeCmsNotifModal();
-    let targetId = itemId;
-    if (typeof catalog !== "undefined" && Array.isArray(catalog)) {
-        const found = catalog.find(i => String(i.id) === String(itemId))
-                   || catalog.find(i => (i.title || "").toLowerCase() === (title || "").toLowerCase());
-        if (found) targetId = found.id;
-    }
+    const found = findCatalogItemForReport(itemId, title);
+    const targetId = found ? found.id : itemId;
     if (typeof editCatalogItem === "function" && targetId) {
         editCatalogItem(targetId);
         window.scrollTo({ top: 0, behavior: "smooth" });
