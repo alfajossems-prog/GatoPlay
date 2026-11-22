@@ -197,6 +197,99 @@ textarea.admin-input::placeholder {
     text-align: center;
 }
 
+
+/* === GATO CMS BUSCADOR DE SUBTITULOS PRO === */
+.sub-icon-search-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #181B22;
+    border: 1px solid #232730;
+    color: #38bdf8;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.sub-icon-search-btn:active { background: #0E5A6F; color: #fff; }
+#subVerifiedMeta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #10b981;
+    font-weight: 600;
+    display: none;
+    align-items: center;
+    gap: 6px;
+}
+#subVerifiedMeta.visible { display: flex; }
+
+#subSearchModal {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(0, 0, 0, 0.84);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+#subSearchModal.open { display: flex; }
+.sub-modal-box {
+    width: 100%;
+    max-width: 440px;
+    max-height: 82vh;
+    display: flex;
+    flex-direction: column;
+    background: #121418;
+    border: 1px solid #232730;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+}
+.sub-modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #232730;
+}
+.sub-modal-head h4 { margin: 0; font-size: 15px; font-weight: 800; color: #f8fafc; }
+.sub-modal-close {
+    background: #181B22; color: #94a3b8; border: 1px solid #232730;
+    border-radius: 8px; width: 30px; height: 30px; cursor: pointer; font-weight: 700;
+}
+.sub-modal-body {
+    padding: 14px 16px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.sub-search-bar { display: flex; gap: 8px; }
+.sub-result-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    background: #0A0B0E;
+    border: 1px solid #232730;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.sub-result-row:hover { border-color: #14748E; }
+.sub-result-poster {
+    width: 34px; height: 50px; object-fit: cover; border-radius: 6px; background: #181B22; flex-shrink: 0;
+}
+.sub-result-info { min-width: 0; flex: 1; }
+.sub-result-title { font-size: 13px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sub-result-sub { font-size: 11.5px; color: #94a3b8; margin-top: 2px; }
+.sub-pick-btn {
+    background: #0E5A6F; color: #fff; border: none; border-radius: 8px;
+    padding: 6px 11px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+}
+
 </style>
 </head>
 <body style="padding-top: 66px;">
@@ -216,7 +309,7 @@ textarea.admin-input::placeholder {
             <label for="cmsLoginPass">Contraseña</label>
             <input type="password" id="cmsLoginPass" class="cms-login-input" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
         </div>
-        <button type="submit" class="cms-login-btn">Iniciar Sesión</button>
+        <div style="display:flex; align-items:center; gap:6px;"><button type="button" id="btnOpenSubModal" class="sub-icon-search-btn" title="Buscar subtítulos manualmente" onclick="openSubSearchModal()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button><button type="submit" class="cms-login-btn">Iniciar Sesión</button>
         <div id="cmsLoginErr" class="cms-login-err"></div>
     </form>
 </div>
@@ -457,9 +550,10 @@ async function handleGatoCmsLogin(ev) {
                 <div id="movieSubtitleBox" style="width:100%; box-sizing:border-box; margin:14px 0 14px; padding:12px; background:#121418; border:1px solid #232730; border-radius:10px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
     <label for="fSubtitle" style="font-size:13px; font-weight:600; color:#E2E8F0;">Subtítulos de la Película (.vtt / .srt)</label>
-    <button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button>
+    <button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button></div>
   </div>
   <input id="fSubtitle" type="text" placeholder="https://... (.vtt o .srt) — opcional" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:8px; border:1px solid #2A303C; background:#0A0B0E; color:#F1F5F9; font-size:13px;">
+<div id="subVerifiedMeta"></div>
   <div id="subStatusMsg" style="font-size:11.5px; color:#8A94A6; margin-top:5px;"></div>
 </div>
         <button id="btnSubmitCatalog" class="btn-cyan" style="width:100%; padding:13px; font-size:13.5px;" onclick="saveItemToCatalog()">
@@ -1735,6 +1829,165 @@ function logoutGatoCms() {
     }
 })();
 
+
+// === GATO CMS: BUSCADOR MODAL DE SUBTITULOS + NOMBRE VERIFICADO ===
+function _getCmsTmdbKey() {
+    if (window.TMDB_API_KEY) return window.TMDB_API_KEY;
+    const inputs = ["cfgTmdbKey", "tmdbApiKey", "fTmdbKey"];
+    for (const id of inputs) {
+        const v = document.getElementById(id)?.value?.trim();
+        if (v) return v;
+    }
+    for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) || "";
+        if (k.toLowerCase().includes("tmdb")) {
+            const v = (localStorage.getItem(k) || "").trim();
+            if (v && v.length >= 16 && !v.includes(" ")) return v;
+        }
+    }
+    return "";
+}
+
+function setSubVerifiedLabel(movieName, yearStr, extra) {
+    const el = document.getElementById("subVerifiedMeta");
+    if (!el) return;
+    if (!movieName) {
+        el.classList.remove("visible");
+        el.innerHTML = "";
+        return;
+    }
+    const yr = yearStr ? ` (${yearStr})` : "";
+    const info = extra ? ` • ${extra}` : "";
+    el.innerHTML = `<span>✓</span><span>Subtítulo de: <strong style="color:#f1f5f9;">${movieName}${yr}</strong>${info}</span>`;
+    el.classList.add("visible");
+}
+
+function openSubSearchModal() {
+    const modal = document.getElementById("subSearchModal");
+    const qInput = document.getElementById("subModalQuery");
+    const curTitle = (document.getElementById("fTitle")?.value || "").trim();
+    if (qInput) qInput.value = curTitle;
+    if (modal) modal.classList.add("open");
+    if (curTitle) runSubModalTmdbSearch();
+}
+
+function closeSubSearchModal() {
+    document.getElementById("subSearchModal")?.classList.remove("open");
+}
+
+async function runSubModalTmdbSearch() {
+    const q = (document.getElementById("subModalQuery")?.value || "").trim();
+    const st = document.getElementById("subModalStatus");
+    const box = document.getElementById("subModalResults");
+    if (!q || !box) return;
+
+    const apiKey = _getCmsTmdbKey();
+    if (!apiKey) {
+        if (st) st.textContent = "Configura tu clave API de TMDB primero.";
+        return;
+    }
+    if (st) st.textContent = "Buscando película en TMDB...";
+    box.innerHTML = "";
+
+    try {
+        const r = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${encodeURIComponent(apiKey)}&language=es-MX&query=${encodeURIComponent(q)}`);
+        const data = await r.json();
+        const list = (data.results || []).slice(0, 8);
+        if (!list.length) {
+            if (st) st.textContent = "No se encontraron películas con ese nombre.";
+            return;
+        }
+        if (st) st.textContent = "Toca la película correcta para ver sus subtítulos en español:";
+        box.innerHTML = list.map(m => {
+            const yr = (m.release_date || "").slice(0, 4);
+            const poster = m.poster_path ? `https://image.tmdb.org/t/p/w92${m.poster_path}` : "";
+            const safeTitle = String(m.title || m.original_title || "").replace(/'/g, "\'").replace(/"/g, "&quot;");
+            return `<div class="sub-result-row" onclick="loadOpenSubtitlesForMovie(${m.id}, '${safeTitle}', '${yr}')">
+                ${poster ? `<img class="sub-result-poster" src="${poster}">` : `<div class="sub-result-poster"></div>`}
+                <div class="sub-result-info">
+                    <div class="sub-result-title">${m.title || m.original_title}</div>
+                    <div class="sub-result-sub">${yr || "Sin año"} • ${m.original_title || ""}</div>
+                </div>
+                <span class="sub-pick-btn">Ver subs</span>
+            </div>`;
+        }).join("");
+    } catch (e) {
+        if (st) st.textContent = "Error buscando en TMDB: " + e.message;
+    }
+}
+
+async function loadOpenSubtitlesForMovie(tmdbId, title, year) {
+    const st = document.getElementById("subModalStatus");
+    const box = document.getElementById("subModalResults");
+    const apiKey = _getCmsTmdbKey();
+    if (st) st.textContent = `Buscando subtítulos en español para "${title}"...`;
+    if (box) box.innerHTML = "";
+
+    try {
+        const extRes = await fetch(`https://api.themoviedb.org/3/movie/${tmdbId}/external_ids?api_key=${encodeURIComponent(apiKey)}`);
+        const ext = await extRes.json();
+        const imdbId = ext.imdb_id;
+        if (!imdbId) {
+            if (st) st.textContent = `No se encontró IMDb ID para "${title}".`;
+            return;
+        }
+
+        const subRes = await fetch(`https://opensubtitles-v3.strem.io/subtitles/movie/${imdbId}.json`);
+        const subData = await subRes.json();
+        const esSubs = (subData.subtitles || []).filter(s => {
+            const lang = String(s.lang || "").toLowerCase();
+            return lang === "spa" || lang === "es" || lang.startsWith("es-") || lang.includes("span");
+        }).slice(0, 12);
+
+        if (!esSubs.length) {
+            if (st) st.textContent = `No hay subtítulos en español disponibles para "${title}" (${imdbId}).`;
+            return;
+        }
+
+        if (st) st.textContent = `${esSubs.length} subtítulos encontrados para "${title}" (${year || imdbId}):`;
+        const safeTitle = String(title).replace(/'/g, "\'").replace(/"/g, "&quot;");
+        box.innerHTML = esSubs.map((s, idx) => {
+            const safeUrl = String(s.url || "").replace(/'/g, "\'");
+            return `<div class="sub-result-row">
+                <div class="sub-result-info">
+                    <div class="sub-result-title">Opción ${idx + 1} • Español (${s.lang || "spa"})</div>
+                    <div class="sub-result-sub">${title}${year ? " (" + year + ")" : ""} • ${imdbId}</div>
+                </div>
+                <button type="button" class="sub-pick-btn" onclick="applyPickedSubtitle('${safeUrl}', '${safeTitle}', '${year}', '${imdbId}')">Usar</button>
+            </div>`;
+        }).join("");
+    } catch (e) {
+        if (st) st.textContent = "Error consultando OpenSubtitles: " + e.message;
+    }
+}
+
+function applyPickedSubtitle(url, title, year, imdbId) {
+    const input = document.getElementById("fSubtitle");
+    if (input) input.value = url;
+    setSubVerifiedLabel(title, year, imdbId);
+    closeSubSearchModal();
+}
+
+// Mostrar etiqueta automáticamente si ya hay un link cargado al editar un título
+(function syncSubLabelOnEdit() {
+    const refresh = () => {
+        const subVal = (document.getElementById("fSubtitle")?.value || "").trim();
+        const titleVal = (document.getElementById("fTitle")?.value || "").trim();
+        const yearVal = (document.getElementById("fYear")?.value || "").trim();
+        const labelEl = document.getElementById("subVerifiedMeta");
+        if (!subVal) {
+            setSubVerifiedLabel("");
+        } else if (titleVal && labelEl && !labelEl.classList.contains("visible")) {
+            setSubVerifiedLabel(titleVal, yearVal, "Enlace asignado");
+        }
+    };
+    document.addEventListener("click", () => setTimeout(refresh, 120));
+    document.getElementById("fSubtitle")?.addEventListener("input", refresh);
+    document.getElementById("subSearchModal")?.addEventListener("click", (e) => {
+        if (e.target.id === "subSearchModal") closeSubSearchModal();
+    });
+})();
+
 </script>
 
 
@@ -1756,6 +2009,25 @@ function logoutGatoCms() {
         <div class="del-modal-actions">
             <button type="button" class="btn-surface" style="flex:1;" onclick="closeDeleteConfirmModal()">Cancelar</button>
             <button type="button" class="btn-danger" style="flex:1;" onclick="confirmDeleteCurrentTitle()">Sí, eliminar</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- MODAL BUSCADOR MANUAL DE SUBTITULOS -->
+<div id="subSearchModal" role="dialog" aria-modal="true">
+    <div class="sub-modal-box">
+        <div class="sub-modal-head">
+            <h4>Buscar Subtítulos (Español)</h4>
+            <button type="button" class="sub-modal-close" onclick="closeSubSearchModal()">✕</button>
+        </div>
+        <div class="sub-modal-body">
+            <div class="sub-search-bar">
+                <input type="text" id="subModalQuery" class="admin-input" placeholder="Nombre de la película..." onkeydown="if(event.key==='Enter'){event.preventDefault();runSubModalTmdbSearch();}">
+                <button type="button" class="sub-pick-btn" onclick="runSubModalTmdbSearch()">Buscar</button>
+            </div>
+            <div id="subModalStatus" style="font-size:12px; color:#94a3b8;">Escribe el nombre para elegir la película exacta y sus subtítulos.</div>
+            <div id="subModalResults" style="display:flex; flex-direction:column; gap:8px;"></div>
         </div>
     </div>
 </div>
