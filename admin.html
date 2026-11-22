@@ -309,7 +309,7 @@ textarea.admin-input::placeholder {
             <label for="cmsLoginPass">Contraseña</label>
             <input type="password" id="cmsLoginPass" class="cms-login-input" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
         </div>
-        <div style="display:flex; align-items:center; gap:6px;"><button type="button" id="btnOpenSubModal" class="sub-icon-search-btn" title="Buscar subtítulos manualmente" onclick="openSubSearchModal()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button><button type="submit" class="cms-login-btn">Iniciar Sesión</button>
+        <button type="submit" class="cms-login-btn">Iniciar Sesión</button>
         <div id="cmsLoginErr" class="cms-login-err"></div>
     </form>
 </div>
@@ -550,7 +550,7 @@ async function handleGatoCmsLogin(ev) {
                 <div id="movieSubtitleBox" style="width:100%; box-sizing:border-box; margin:14px 0 14px; padding:12px; background:#121418; border:1px solid #232730; border-radius:10px;">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; gap:8px;">
     <label for="fSubtitle" style="font-size:13px; font-weight:600; color:#E2E8F0;">Subtítulos de la Película (.vtt / .srt)</label>
-    <button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button></div>
+    <div style="display:flex; align-items:center; gap:6px;"><button type="button" id="btnOpenSubModal" class="sub-icon-search-btn" title="Buscar subtítulos manualmente" onclick="openSubSearchModal()"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></button><button type="button" onclick="buscarSubtituloWyzie()" style="background:#0E5A6F; color:#fff; border:1px solid #14748E; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer;">Buscar automático</button></div>
   </div>
   <input id="fSubtitle" type="text" placeholder="https://... (.vtt o .srt) — opcional" style="width:100%; box-sizing:border-box; padding:9px 10px; border-radius:8px; border:1px solid #2A303C; background:#0A0B0E; color:#F1F5F9; font-size:13px;">
 <div id="subVerifiedMeta"></div>
@@ -1968,7 +1968,6 @@ function applyPickedSubtitle(url, title, year, imdbId) {
     closeSubSearchModal();
 }
 
-// Mostrar etiqueta automáticamente si ya hay un link cargado al editar un título
 (function syncSubLabelOnEdit() {
     const refresh = () => {
         const subVal = (document.getElementById("fSubtitle")?.value || "").trim();
