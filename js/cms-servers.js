@@ -329,7 +329,7 @@
   window.msInsertOne = (encUrl, srvKey) => {
     const url = decodeURIComponent(encUrl);
     if (fillServerRow(url, srvKey)) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(url); alert("Enlace copiado:\n" + url); }
+    else if (navigator.clipboard) { navigator.clipboard.writeText(url); alert("Enlace copiado: " + url); }
   };
 
   window.msInsertAll = (encList) => {
@@ -337,7 +337,7 @@
     let n = 0;
     list.forEach(i => { if (fillServerRow(i.embed, i.server)) n++; });
     if (n > 0) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(list.map(i => i.embed).join("\n")); alert("Enlaces copiados al portapapeles."); }
+    else if (navigator.clipboard) { navigator.clipboard.writeText(list.map(i => i.embed).join(String.fromCharCode(10))); alert("Enlaces copiados al portapapeles."); }
   };
 
   window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
