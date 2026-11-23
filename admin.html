@@ -3021,5 +3021,200 @@ document.addEventListener("DOMContentLoaded", () => {
 </script>
 <!-- GATO-MS-END -->
 
+<!-- GATO-HEADER-MENU-START -->
+<style id="gatoHeaderMenuCSS">
+  .gh-topbar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+    position: relative !important;
+  }
+  #gatoMenuToggleBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 11px;
+    border-radius: 10px;
+    border: 1px solid var(--gt-border-2, #2A303C);
+    background: var(--gt-surface-2, #181C24);
+    color: var(--gt-text, #F1F5F9);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #gatoHeaderDropdown {
+    display: none;
+    position: fixed;
+    top: 58px;
+    right: 12px;
+    width: min(310px, calc(100vw - 24px));
+    z-index: 99985;
+    background: var(--gt-surface, #121418);
+    border: 1px solid var(--gt-border-2, #2A303C);
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: var(--gt-shadow, 0 18px 40px rgba(0,0,0,0.55));
+    flex-direction: column;
+    gap: 8px;
+  }
+  #gatoHeaderDropdown.open {
+    display: flex;
+  }
+  .gh-dd-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .gh-dd-divider {
+    height: 1px;
+    background: var(--gt-border, #232730);
+    margin: 2px 0;
+  }
+  #gatoHeaderDropdown button,
+  #gatoHeaderDropdown a {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    text-align: left !important;
+    border-radius: 9px !important;
+    padding: 9px 11px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .gh-dd-status {
+    background: var(--gt-surface-2, #181C24);
+    border: 1px solid var(--gt-border, #232730);
+    border-radius: 10px;
+    padding: 9px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .gh-dd-status > * {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+  .gh-dd-status button {
+    width: auto !important;
+    padding: 5px 10px !important;
+  }
+</style>
+
+<script>
+(function() {
+  const SVG_MENU = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+  const SVG_CLOSE = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  const SVG_SRV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="2" y="3" width="20" height="7" rx="2"/><rect x="2" y="14" width="20" height="7" rx="2"/><line x1="6" y1="6.5" x2="6.01" y2="6.5"/><line x1="6" y1="17.5" x2="6.01" y2="17.5"/></svg>';
+
+  function initHeaderMenu() {
+    const header = document.querySelector("header") || document.querySelector("nav");
+    if (!header || document.getElementById("gatoMenuToggleBtn")) return;
+
+    header.classList.add("gh-topbar");
+
+    // Crear contenedor desplegable
+    const dd = document.createElement("div");
+    dd.id = "gatoHeaderDropdown";
+
+    const actionsSec = document.createElement("div");
+    actionsSec.className = "gh-dd-section";
+
+    // Botón principal Servers dentro del menú
+    const srvBtn = document.createElement("button");
+    srvBtn.type = "button";
+    srvBtn.className = "ms-btn ms-btn-primary";
+    srvBtn.innerHTML = SVG_SRV + '<span>Servers</span>';
+    srvBtn.onclick = function() {
+      dd.classList.remove("open");
+      toggleBtn.innerHTML = SVG_MENU + '<span>Menú</span>';
+      if (typeof window.msOpenModal === "function") window.msOpenModal();
+    };
+    actionsSec.appendChild(srvBtn);
+
+    // Mover botones y enlaces del header (excepto el logo/título) al desplegable
+    const headerControls = Array.from(header.querySelectorAll("button, a"));
+    headerControls.forEach(el => {
+      if (el.id === "gatoMenuToggleBtn") return;
+      if (el.textContent.toUpperCase().includes("GATO CMS")) return;
+      el.addEventListener("click", () => {
+        dd.classList.remove("open");
+        toggleBtn.innerHTML = SVG_MENU + '<span>Menú</span>';
+      });
+      actionsSec.appendChild(el);
+    });
+
+    // Ocultar contenedores vacíos que hayan quedado en el header
+    Array.from(header.children).forEach(ch => {
+      if (!ch.textContent.trim() && ch.querySelectorAll("svg, img").length === 0) {
+        ch.style.display = "none";
+      }
+    });
+
+    dd.appendChild(actionsSec);
+
+    // Mover la barra de estado (Cloud Activo / TMDB Listo / Editar) dentro del desplegable
+    const allDivs = Array.from(document.querySelectorAll("div, section"));
+    const statusBar = allDivs.find(el => {
+      if (el.closest("#gatoMultiServerModal") || el.closest("#gatoHeaderDropdown")) return false;
+      const t = el.textContent || "";
+      return t.includes("Cloud Activo") && t.includes("TMDB") && el.children.length <= 6 && el.offsetHeight < 120;
+    });
+    if (statusBar) {
+      const divLine = document.createElement("div");
+      divLine.className = "gh-dd-divider";
+      dd.appendChild(divLine);
+
+      const stWrap = document.createElement("div");
+      stWrap.className = "gh-dd-status";
+      stWrap.appendChild(statusBar);
+      dd.appendChild(stWrap);
+    }
+
+    // Botón hamburguesa minimalista en la cabecera
+    const toggleBtn = document.createElement("button");
+    toggleBtn.type = "button";
+    toggleBtn.id = "gatoMenuToggleBtn";
+    toggleBtn.innerHTML = SVG_MENU + '<span>Menú</span>';
+    toggleBtn.onclick = function(e) {
+      e.stopPropagation();
+      const isOpen = dd.classList.toggle("open");
+      toggleBtn.innerHTML = (isOpen ? SVG_CLOSE : SVG_MENU) + '<span>Menú</span>';
+    };
+
+    header.appendChild(toggleBtn);
+    document.body.appendChild(dd);
+
+    // Cerrar al tocar fuera
+    document.addEventListener("click", function(e) {
+      if (!dd.classList.contains("open")) return;
+      if (!dd.contains(e.target) && !toggleBtn.contains(e.target)) {
+        dd.classList.remove("open");
+        toggleBtn.innerHTML = SVG_MENU + '<span>Menú</span>';
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initHeaderMenu);
+  } else {
+    initHeaderMenu();
+  }
+})();
+</script>
+<!-- GATO-HEADER-MENU-END -->
+
 </body>
 </html>
