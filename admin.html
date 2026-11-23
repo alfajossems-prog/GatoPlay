@@ -504,7 +504,7 @@ async function handleGatoCmsLogin(ev) {
                         <svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                         <span>Enlaces de Video / Servidores</span>
                     </span>
-                    <button type="button" class="btn-cyan" style="padding:6px 12px; font-size:11.5px;" onclick="addServerInputRow('', '')">
+                    <button type="button" id="btnOpenMultiServer" class="btn-cyan" style="padding:6px 12px; font-size:11.5px; background:#0E5A6F; border:1px solid #14748E; color:#fff; margin-right:6px;" onclick="openMultiServerModal()">☁️ Nube Multi-Servidor</button><button type="button" class="btn-cyan" style="padding:6px 12px; font-size:11.5px;" onclick="addServerInputRow('', '')">
                         <svg class="ico" style="width:14px;height:14px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         <span>Agregar otro enlace</span>
                     </button>
@@ -2185,6 +2185,251 @@ async function resolveCmsReport(repId) {
 document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => loadCmsReports(false), 1200);
 });
+</script>
+
+
+<!-- ========== PANEL MULTI-SERVIDOR (CLOUDFLARE WORKER) ========== -->
+<div id="gatoMultiServerModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:14px;">
+  <div style="width:100%; max-width:680px; max-height:90vh; overflow-y:auto; background:#121418; border:1px solid #232730; border-radius:14px; padding:18px; color:#F1F5F9; box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #232730; padding-bottom:12px; margin-bottom:14px;">
+      <div>
+        <div style="font-size:16px; font-weight:700; color:#fff;">☁️ Nube Multi-Servidor</div>
+        <div style="font-size:11.5px; color:#8A94A6;">VOE • Streamtape • Mixdrop • Doodstream</div>
+      </div>
+      <button type="button" onclick="closeMultiServerModal()" style="background:#1B1F27; border:1px solid #2A303C; color:#E2E8F0; border-radius:8px; padding:6px 11px; cursor:pointer; font-weight:700;">✕</button>
+    </div>
+
+    <!-- Contraseña maestra -->
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; background:#0A0B0E; padding:10px; border-radius:10px; border:1px solid #232730;">
+      <input id="msWorkerPass" type="password" placeholder="Contraseña maestra del Worker" style="flex:1; background:transparent; border:none; color:#F1F5F9; font-size:13px; outline:none;">
+      <button type="button" onclick="msSavePassAndPing()" style="background:#0E5A6F; border:1px solid #14748E; color:#fff; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer;">Conectar</button>
+    </div>
+    <div id="msConnStatus" style="font-size:12px; color:#8A94A6; margin-bottom:12px;"></div>
+
+    <!-- Pestañas -->
+    <div style="display:flex; gap:6px; margin-bottom:14px;">
+      <button type="button" id="msTabBtnRemote" onclick="msSwitchTab('remote')" style="flex:1; padding:9px; border-radius:8px; border:1px solid #14748E; background:#0E5A6F; color:#fff; font-size:12.5px; font-weight:600; cursor:pointer;">Carga Remota</button>
+      <button type="button" id="msTabBtnUpload" onclick="msSwitchTab('upload')" style="flex:1; padding:9px; border-radius:8px; border:1px solid #232730; background:#0A0B0E; color:#94A3B8; font-size:12.5px; font-weight:600; cursor:pointer;">Subir Archivo</button>
+      <button type="button" id="msTabBtnFiles" onclick="msSwitchTab('files')" style="flex:1; padding:9px; border-radius:8px; border:1px solid #232730; background:#0A0B0E; color:#94A3B8; font-size:12.5px; font-weight:600; cursor:pointer;">Mis Archivos</button>
+    </div>
+
+    <!-- TAB 1: CARGA REMOTA -->
+    <div id="msTabRemote">
+      <input id="msRemoteUrl" type="text" placeholder="Pega aquí la URL remota del video (MP4 / enlace directo)..." style="width:100%; box-sizing:border-box; padding:10px 12px; background:#0A0B0E; border:1px solid #2A303C; border-radius:8px; color:#F1F5F9; font-size:13px; margin-bottom:10px;">
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; font-size:12.5px;">
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-rem-srv" value="voe" checked> VOE</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-rem-srv" value="streamtape" checked> Streamtape</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-rem-srv" value="mixdrop" checked> Mixdrop</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-rem-srv" value="doodstream"> Doodstream</label>
+      </div>
+      <button type="button" onclick="msStartRemoteUpload()" style="width:100%; padding:10px; background:#0E5A6F; border:1px solid #14748E; color:#fff; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">🚀 Enviar a servidores seleccionados</button>
+      <div id="msRemoteResults" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <!-- TAB 2: SUBIR ARCHIVO LOCAL -->
+    <div id="msTabUpload" style="display:none;">
+      <input id="msLocalFile" type="file" accept="video/*,.mp4,.mkv,.webm" style="width:100%; box-sizing:border-box; padding:10px; background:#0A0B0E; border:1px dashed #2A303C; border-radius:8px; color:#CBD5E1; font-size:12.5px; margin-bottom:10px;">
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; font-size:12.5px;">
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-up-srv" value="voe" checked> VOE</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-up-srv" value="streamtape" checked> Streamtape</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-up-srv" value="mixdrop" checked> Mixdrop</label>
+        <label style="cursor:pointer;"><input type="checkbox" class="ms-up-srv" value="doodstream"> Doodstream</label>
+      </div>
+      <button type="button" onclick="msStartLocalUpload()" style="width:100%; padding:10px; background:#0E5A6F; border:1px solid #14748E; color:#fff; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">⬆️ Subir en paralelo</button>
+      <div id="msUploadProgress" style="margin-top:12px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+
+    <!-- TAB 3: MIS ARCHIVOS (EMBED DIRECTO) -->
+    <div id="msTabFiles" style="display:none;">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <input id="msFilesQuery" type="text" placeholder="Buscar archivo por nombre..." style="flex:1; padding:9px 12px; background:#0A0B0E; border:1px solid #2A303C; border-radius:8px; color:#F1F5F9; font-size:13px;">
+        <button type="button" onclick="msLoadFiles()" style="background:#0E5A6F; border:1px solid #14748E; color:#fff; border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">Buscar</button>
+      </div>
+      <div id="msFilesList" style="display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  const WORKER_BASE = "https://gato-uploader.josseanm.workers.dev";
+  const SRV_LABELS = { voe: "VOE", streamtape: "Streamtape", mixdrop: "Mixdrop", doodstream: "Doodstream" };
+
+  function getPass() {
+    const inp = document.getElementById("msWorkerPass");
+    const val = (inp && inp.value.trim()) || localStorage.getItem("gato_worker_pass") || "";
+    return val;
+  }
+
+  window.openMultiServerModal = function() {
+    const m = document.getElementById("gatoMultiServerModal");
+    if (!m) return;
+    const saved = localStorage.getItem("gato_worker_pass") || "";
+    const inp = document.getElementById("msWorkerPass");
+    if (inp && saved) inp.value = saved;
+    m.style.display = "flex";
+    if (saved) window.msSavePassAndPing();
+  };
+
+  window.closeMultiServerModal = function() {
+    const m = document.getElementById("gatoMultiServerModal");
+    if (m) m.style.display = "none";
+  };
+
+  window.msSwitchTab = function(tab) {
+    ["remote", "upload", "files"].forEach(t => {
+      const box = document.getElementById("msTab" + t.charAt(0).toUpperCase() + t.slice(1));
+      const btn = document.getElementById("msTabBtn" + t.charAt(0).toUpperCase() + t.slice(1));
+      if (box) box.style.display = (t === tab) ? "block" : "none";
+      if (btn) {
+        btn.style.background = (t === tab) ? "#0E5A6F" : "#0A0B0E";
+        btn.style.borderColor = (t === tab) ? "#14748E" : "#232730";
+        btn.style.color = (t === tab) ? "#fff" : "#94A3B8";
+      }
+    });
+    if (tab === "files") window.msLoadFiles();
+  };
+
+  window.msAddEmbedToForm = function(srvKey, embedUrl) {
+    if (!embedUrl) return;
+    const label = SRV_LABELS[srvKey] || srvKey || "Servidor";
+    if (typeof addServerInputRow === "function") {
+      addServerInputRow(label, embedUrl, "1080p");
+      const st = document.getElementById("msConnStatus");
+      if (st) st.innerHTML = '<span style="color:#10b981;">✓ Agregado al título: ' + label + '</span>';
+    }
+  };
+
+  window.msSavePassAndPing = async function() {
+    const pass = getPass();
+    const st = document.getElementById("msConnStatus");
+    if (!pass) { if (st) st.innerHTML = '<span style="color:#f59e0b;">Ingresa tu contraseña maestra.</span>'; return; }
+    localStorage.setItem("gato_worker_pass", pass);
+    if (st) st.textContent = "Conectando con Cloudflare Worker...";
+    try {
+      const r = await fetch(WORKER_BASE + "/ping", { headers: { "X-Panel-Pass": pass } });
+      const d = await r.json();
+      if (!d.ok) { if (st) st.innerHTML = '<span style="color:#ef4444;">✗ ' + (d.error || "Error de acceso") + '</span>'; return; }
+      const activos = Object.keys(d.servers || {}).filter(k => d.servers[k]).map(k => SRV_LABELS[k] || k).join(", ");
+      if (st) st.innerHTML = '<span style="color:#10b981;">✓ Conectado • Activos: ' + activos + '</span>';
+    } catch (e) {
+      if (st) st.innerHTML = '<span style="color:#ef4444;">✗ Error de red: ' + e.message + '</span>';
+    }
+  };
+
+  window.msStartRemoteUpload = async function() {
+    const pass = getPass();
+    const url = (document.getElementById("msRemoteUrl").value || "").trim();
+    const targets = Array.from(document.querySelectorAll(".ms-rem-srv:checked")).map(c => c.value);
+    const out = document.getElementById("msRemoteResults");
+    if (!pass) { alert("Primero conecta tu contraseña maestra."); return; }
+    if (!url || !targets.length) { alert("Pega una URL y selecciona al menos un servidor."); return; }
+    out.innerHTML = '<div style="font-size:12.5px; color:#94A3B8;">Enviando carga remota en paralelo...</div>';
+    try {
+      const r = await fetch(WORKER_BASE + "/remote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Panel-Pass": pass },
+        body: JSON.stringify({ url, servers: targets })
+      });
+      const d = await r.json();
+      if (!d.ok) { out.innerHTML = '<div style="color:#ef4444;">✗ ' + (d.error || "Error") + '</div>'; return; }
+      out.innerHTML = (d.results || []).map(res => {
+        const name = SRV_LABELS[res.server] || res.server;
+        const badge = res.ok ? '<span style="color:#10b981;font-weight:700;">✓ Enviado</span>' : '<span style="color:#ef4444;font-weight:700;">✗ ' + (res.error || "Falló") + '</span>';
+        const btn = res.embed ? `<button type="button" onclick="msAddEmbedToForm('${res.server}','${res.embed}')" style="background:#0E5A6F;border:1px solid #14748E;color:#fff;border-radius:6px;padding:4px 9px;font-size:11.5px;cursor:pointer;">+ Usar Embed</button>` : (res.id ? `<span style="font-size:11px;color:#8A94A6;">ID: ${res.id} (revisa en Mis Archivos)</span>` : '');
+        return `<div style="display:flex;justify-content:space-between;align-items:center;background:#0A0B0E;border:1px solid #232730;padding:9px 12px;border-radius:8px;font-size:12.5px;"><div><strong>${name}</strong> • ${badge}</div><div>${btn}</div></div>`;
+      }).join("");
+    } catch (e) {
+      out.innerHTML = '<div style="color:#ef4444;">✗ ' + e.message + '</div>';
+    }
+  };
+
+  window.msStartLocalUpload = async function() {
+    const pass = getPass();
+    const fileInput = document.getElementById("msLocalFile");
+    const file = fileInput && fileInput.files && fileInput.files[0];
+    const targets = Array.from(document.querySelectorAll(".ms-up-srv:checked")).map(c => c.value);
+    const out = document.getElementById("msUploadProgress");
+    if (!pass) { alert("Primero conecta tu contraseña maestra."); return; }
+    if (!file || !targets.length) { alert("Selecciona un archivo de video y al menos un servidor."); return; }
+    out.innerHTML = "";
+
+    targets.forEach(async (srv) => {
+      const rowId = "msUpRow_" + srv;
+      const name = SRV_LABELS[srv] || srv;
+      out.insertAdjacentHTML("beforeend", `<div id="${rowId}" style="background:#0A0B0E;border:1px solid #232730;padding:10px 12px;border-radius:8px;font-size:12.5px;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><strong>${name}</strong><span class="ms-up-st" style="color:#94A3B8;">Preparando...</span></div><div style="height:6px;background:#1E2430;border-radius:4px;overflow:hidden;"><div class="ms-up-bar" style="height:100%;width:0%;background:#14748E;transition:width 0.2s;"></div></div><div class="ms-up-act" style="margin-top:6px;"></div></div>`);
+      const row = document.getElementById(rowId);
+      const stEl = row.querySelector(".ms-up-st");
+      const barEl = row.querySelector(".ms-up-bar");
+      const actEl = row.querySelector(".ms-up-act");
+
+      try {
+        const r = await fetch(WORKER_BASE + "/upload-url?server=" + encodeURIComponent(srv), { headers: { "X-Panel-Pass": pass } });
+        const cfg = await r.json();
+        if (!cfg.ok || !cfg.uploadUrl) { stEl.innerHTML = '<span style="color:#ef4444;">✗ No disponible</span>'; return; }
+
+        const fd = new FormData();
+        if (cfg.extraFields) Object.keys(cfg.extraFields).forEach(k => fd.append(k, cfg.extraFields[k]));
+        fd.append(cfg.fieldName || "file", file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", cfg.uploadUrl, true);
+        xhr.upload.onprogress = function(ev) {
+          if (ev.lengthComputable) {
+            const pct = Math.round((ev.loaded * 100) / ev.total);
+            barEl.style.width = pct + "%";
+            stEl.textContent = pct + "%";
+          }
+        };
+        xhr.onload = function() {
+          barEl.style.width = "100%";
+          let embed = "";
+          try {
+            const resp = JSON.parse(xhr.responseText || "{}");
+            if (srv === "streamtape" && resp.result && resp.result.id) embed = "https://streamtape.com/e/" + resp.result.id;
+            if (srv === "mixdrop" && resp.result && resp.result.fileref) embed = "https://mixdrop.ag/e/" + resp.result.fileref;
+            if (srv === "voe" && resp.file && resp.file.file_code) embed = "https://voe.sx/e/" + resp.file.file_code;
+            if (srv === "doodstream" && resp.result && resp.result[0] && resp.result[0].filecode) embed = "https://doodstream.com/e/" + resp.result[0].filecode;
+          } catch (_) {}
+          stEl.innerHTML = '<span style="color:#10b981;">✓ Completado</span>';
+          if (embed) {
+            actEl.innerHTML = `<button type="button" onclick="msAddEmbedToForm('${srv}','${embed}')" style="background:#0E5A6F;border:1px solid #14748E;color:#fff;border-radius:6px;padding:5px 10px;font-size:11.5px;cursor:pointer;">+ Usar Embed (${embed})</button>`;
+          } else {
+            actEl.innerHTML = '<span style="font-size:11.5px;color:#8A94A6;">Subido. Abre "Mis Archivos" para elegir el Embed Link.</span>';
+          }
+        };
+        xhr.onerror = function() {
+          stEl.innerHTML = '<span style="color:#f59e0b;">CORS bloqueado por el servidor (usa Carga Remota)</span>';
+        };
+        xhr.send(fd);
+      } catch (e) {
+        stEl.innerHTML = '<span style="color:#ef4444;">✗ ' + e.message + '</span>';
+      }
+    });
+  };
+
+  window.msLoadFiles = async function() {
+    const pass = getPass();
+    const q = (document.getElementById("msFilesQuery").value || "").trim();
+    const out = document.getElementById("msFilesList");
+    if (!pass) { out.innerHTML = '<div style="color:#f59e0b;font-size:12.5px;">Conecta tu contraseña maestra arriba primero.</div>'; return; }
+    out.innerHTML = '<div style="color:#94A3B8;font-size:12.5px;">Cargando archivos de tus servidores...</div>';
+    try {
+      const r = await fetch(WORKER_BASE + "/files?q=" + encodeURIComponent(q), { headers: { "X-Panel-Pass": pass } });
+      const d = await r.json();
+      if (!d.ok) { out.innerHTML = '<div style="color:#ef4444;">✗ ' + (d.error || "Error") + '</div>'; return; }
+      const files = d.files || [];
+      if (!files.length) { out.innerHTML = '<div style="color:#8A94A6;font-size:12.5px;">No se encontraron archivos.</div>'; return; }
+      out.innerHTML = files.slice(0, 60).map(f => {
+        const badge = SRV_LABELS[f.server] || f.server;
+        const safeTitle = String(f.title || "").replace(/</g, "&lt;");
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:#0A0B0E;border:1px solid #232730;padding:9px 12px;border-radius:8px;font-size:12px;"><div style="min-width:0;flex:1;"><span style="display:inline-block;background:#0E5A6F;color:#fff;padding:2px 6px;border-radius:4px;font-size:10.5px;font-weight:700;margin-right:6px;">${badge}</span><span style="color:#E2E8F0;word-break:break-all;">${safeTitle}</span></div><button type="button" onclick="msAddEmbedToForm('${f.server}','${f.embed}')" style="flex-shrink:0;background:#0E5A6F;border:1px solid #14748E;color:#fff;border-radius:6px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">+ Embed</button></div>`;
+      }).join("");
+    } catch (e) {
+      out.innerHTML = '<div style="color:#ef4444;">✗ ' + e.message + '</div>';
+    }
+  };
+})();
 </script>
 
 </body>
