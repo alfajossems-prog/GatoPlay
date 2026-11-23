@@ -155,8 +155,7 @@
     const m = document.getElementById("gatoMultiServerModal");
     if (!m) return;
     m.style.display = "flex";
-    const inp = document.getElementById("msPassInput");
-    if (inp) inp.value = getPass();
+    
     if (!getPass()) {
       document.getElementById("msSettingsBox").style.display = "block";
       document.getElementById("msConnStatus").textContent = "Configura tu contraseña en ajustes";
@@ -164,7 +163,7 @@
   };
 
   window.msCloseModal = () => { const m = document.getElementById("gatoMultiServerModal"); if (m) m.style.display = "none"; };
-  window.msToggleSettings = () => { const b = document.getElementById("msSettingsBox"); if (b) b.style.display = b.style.display === "none" ? "block" : "none"; };
+  window.msToggleSettings = () => { const b = document.getElementById("msSettingsBox"); if (!b) return; const show = b.style.display === "none"; b.style.display = show ? "block" : "none"; if (show) { const inp = document.getElementById("msPassInput"); if (inp) inp.value = getPass(); } };
   window.msSavePass = () => {
     const v = (document.getElementById("msPassInput").value || "").trim();
     if (!v) return;
