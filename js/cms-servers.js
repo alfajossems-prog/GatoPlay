@@ -205,6 +205,7 @@
       const r = await fetch(WORKER_BASE + "/files", { headers: { "X-Panel-Pass": getPass() } });
       const d = await r.json();
       allFilesRaw = Array.isArray(d.files) ? d.files : [];
+      reconcileTasksWithFiles();
       msRenderFiles();
     } catch (e) { listEl.innerHTML = '<div style="padding:18px;text-align:center;color:#ef4444;grid-column:1/-1;">Error: ' + e.message + '</div>'; }
   };
@@ -249,7 +250,13 @@
       const pillsHtml = activeSrvs.map(s => {
         const f = g.servers[s];
         if (f) return `<button type="button" class="ms-srv-pill" style="background:${SRV_COLORS[s]};color:${s==='mixdrop'?'#111':'#fff'};" onclick="msInsertOne('${encodeURIComponent(f.embed)}','${s}')">${SVG_CHECK} ${SRV_LABELS[s]}</button>`;
-        return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(firstAvail.embed)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
+        const qTask = msTasks.find(t => (t.state === "running" || t.state === "processing") && t.server === s && normTitle(t.title) === g.key);
+        if (qTask) {
+          const pctTxt = qTask.pct > 0 ? ` (${qTask.pct}%)` : "";
+          return `<button type="button" class="ms-srv-pill missing" disabled style="border-style:solid;border-color:#10b981;color:#10b981;opacity:0.95;">En cola${pctTxt}</button>`;
+        }
+        const bestSrc = (s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : firstAvail;
+        return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(bestSrc.embed)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
       const allEmbedsJson = encodeURIComponent(JSON.stringify(Object.values(g.servers).map(x => ({ server: x.server, embed: x.embed }))));
       return `<div class="ms-card">
@@ -413,8 +420,15 @@
   window.msToggleTray = () => { msTrayOpen = !msTrayOpen; const l = document.getElementById("msTrayList"), a = document.getElementById("msTrayArrow"); if (l) l.style.display = msTrayOpen ? "flex" : "none"; if (a) a.textContent = msTrayOpen ? "▾" : "▴"; };
   window.msClearDoneTasks = () => { msTasks = msTasks.filter(t => t.state === "running"); saveTasks(); renderTray(); };
   window.msEnqueueTask = (task) => {
-    msTasks.unshift({ uid: Date.now() + "_" + Math.random().toString(36).slice(2, 6), server: task.server, id: task.id || "", title: task.title || "Archivo", state: task.id ? "running" : "processing", pct: 0, detail: task.id ? "Iniciando..." : "Procesando en servidor" });
-    saveTasks(); msTrayOpen = true; renderTray(); startPolling();
+    const tKey = normTitle(task.title || "");
+    const exists = msTasks.find(t => (t.state === "running" || t.state === "processing") && t.server === task.server && normTitle(t.title) === tKey);
+    if (exists) {
+      if (task.id && !exists.id) { exists.id = task.id; exists.state = "running"; }
+      saveTasks(); renderTray(); startPolling();
+      return;
+    }
+    msTasks.unshift({ uid: Date.now() + "_" + Math.random().toString(36).slice(2, 6), server: task.server, id: task.id || "", title: task.title || "Archivo", state: task.id ? "running" : "processing", pct: 0, detail: task.id ? "En cola..." : "Esperando en servidor..." });
+    saveTasks(); msTrayOpen = true; renderTray(); msRenderFiles(); startPolling();
   };
 
   function renderTray() {
@@ -422,7 +436,7 @@
     if (!tray || !listEl) return;
     if (!msTasks.length) { tray.style.display = "none"; return; }
     tray.style.display = "block";
-    const running = msTasks.filter(t => t.state === "running").length;
+    const running = msTasks.filter(t => t.state === "running" || t.state === "processing").length;
     titleEl.textContent = running > 0 ? `Transferencias en curso (${running})` : `Transferencias recientes (${msTasks.length})`;
     listEl.style.display = msTrayOpen ? "flex" : "none";
     listEl.innerHTML = msTasks.map(t => {
@@ -432,21 +446,50 @@
     }).join("");
   }
 
+  let msPollTick = 0;
+
+  function reconcileTasksWithFiles() {
+    let changed = false;
+    msTasks.forEach(t => {
+      if (t.state !== "running" && t.state !== "processing") return;
+      const tKey = normTitle(t.title);
+      const found = allFilesRaw.some(f => f.server === t.server && normTitle(f.title) === tKey);
+      if (found) {
+        t.state = "done"; t.pct = 100; t.detail = "Disponible";
+        changed = true;
+      }
+    });
+    if (changed) { saveTasks(); renderTray(); }
+  }
+
   async function pollRemoteStatuses() {
-    const active = msTasks.filter(t => t.state === "running" && t.id);
-    if (!active.length || !getPass()) { clearInterval(msPollTimer); msPollTimer = null; return; }
+    const pending = msTasks.filter(t => t.state === "running" || t.state === "processing");
+    if (!pending.length || !getPass()) { clearInterval(msPollTimer); msPollTimer = null; return; }
+    msPollTick++;
     try {
-      const r = await fetch(WORKER_BASE + "/remote-status", { method: "POST", headers: { "Content-Type": "application/json", "X-Panel-Pass": getPass() }, body: JSON.stringify({ tasks: active.map(t => ({ server: t.server, id: t.id })) }) });
-      const d = await r.json();
+      const withId = pending.filter(t => t.id);
       let anyFinished = false;
-      (d.statuses || []).forEach(st => {
-        const item = msTasks.find(t => t.id === st.id && t.server === st.server);
-        if (!item) return;
-        if (item.state !== "done" && st.state === "done") anyFinished = true;
-        item.state = st.state; item.pct = st.pct || 0; item.detail = st.detail || "";
-      });
-      saveTasks(); renderTray();
-      if (anyFinished) msLoadFiles();
+      if (withId.length) {
+        const r = await fetch(WORKER_BASE + "/remote-status", { method: "POST", headers: { "Content-Type": "application/json", "X-Panel-Pass": getPass() }, body: JSON.stringify({ tasks: withId.map(t => ({ server: t.server, id: t.id })) }) });
+        const d = await r.json();
+        (d.statuses || []).forEach(st => {
+          const item = msTasks.find(t => t.id === st.id && t.server === st.server);
+          if (!item) return;
+          if (item.state !== "done" && st.state === "done") anyFinished = true;
+          item.state = st.state; item.pct = st.pct || 0; item.detail = st.detail || "";
+        });
+        saveTasks(); renderTray(); msRenderFiles();
+      }
+      // Cada 3 ciclos (~24s) o si terminó alguno, refresca /files silenciosamente para detectar subidas listas
+      if (anyFinished || msPollTick % 3 === 0) {
+        const rf = await fetch(WORKER_BASE + "/files", { headers: { "X-Panel-Pass": getPass() } });
+        const df = await rf.json();
+        if (Array.isArray(df.files)) {
+          allFilesRaw = df.files;
+          reconcileTasksWithFiles();
+          msRenderFiles();
+        }
+      }
     } catch (_) {}
   }
 
@@ -456,7 +499,7 @@
     applyTheme(localStorage.getItem("gato_theme") || "dark");
     initHeaderMenu();
     renderTray();
-    if (msTasks.some(t => t.state === "running" && t.id)) startPolling();
+    if (msTasks.some(t => t.state === "running" || t.state === "processing")) startPolling();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
