@@ -256,7 +256,8 @@
           return `<button type="button" class="ms-srv-pill missing" disabled style="border-style:solid;border-color:#10b981;color:#10b981;opacity:0.95;">En cola${pctTxt}</button>`;
         }
         const bestSrc = (s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : firstAvail;
-        return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(bestSrc.embed)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
+        const srcUrl = (s === "mixdrop" && bestSrc.server === "streamtape") ? bestSrc.embed.replace("/e/", "/v/") : bestSrc.embed;
+        return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(srcUrl)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
       const allEmbedsJson = encodeURIComponent(JSON.stringify(Object.values(g.servers).map(x => ({ server: x.server, embed: x.embed }))));
       return `<div class="ms-card">
