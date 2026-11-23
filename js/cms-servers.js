@@ -127,7 +127,7 @@
   }
 
   function normTitle(str) {
-    return String(str || "").toLowerCase().replace(/\.(mp4|mkv|avi|mov|webm)(\.mp4)?$/gi, "").replace(/[\._\-]+/g, " ").replace(/\s+/g, " ").trim();
+    return String(str || "").toLowerCase().replace(/\.(mp4|mkv|avi|mov|webm)(\.mp4)?$/gi, "").replace(/[\._\-\+;]+/g, " ").replace(/\s+/g, " ").trim();
   }
 
   function getCatalogEmbedSet() {
@@ -249,7 +249,7 @@
       const firstAvail = Object.values(g.servers)[0];
       const pillsHtml = activeSrvs.map(s => {
         const f = g.servers[s];
-        if (f) return `<button type="button" class="ms-srv-pill" style="background:${SRV_COLORS[s]};color:${s==='mixdrop'?'#111':'#fff'};" onclick="msInsertOne('${encodeURIComponent(f.embed)}')">${SVG_CHECK} ${SRV_LABELS[s]}</button>`;
+        if (f) return `<button type="button" class="ms-srv-pill" style="background:${SRV_COLORS[s]};color:${s==='mixdrop'?'#111':'#fff'};" onclick="msInsertOne('${encodeURIComponent(f.embed)}','${s}')">${SVG_CHECK} ${SRV_LABELS[s]}</button>`;
         return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(firstAvail.embed)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
       const allEmbedsJson = encodeURIComponent(JSON.stringify(Object.values(g.servers).map(x => ({ server: x.server, embed: x.embed }))));
@@ -271,24 +271,75 @@
     }).join("");
   };
 
-  function fillEmptyServerRow(embedUrl) {
-    const inputs = Array.from(document.querySelectorAll('input[type="url"], input[type="text"]')).filter(el => !el.closest('#gatoMultiServerModal') && (el.placeholder?.toLowerCase().includes('http') || el.placeholder?.toLowerCase().includes('enlace') || el.placeholder?.toLowerCase().includes('url') || el.className?.toLowerCase().includes('url')));
-    const empty = inputs.find(el => !el.value.trim());
-    if (empty) { empty.value = embedUrl; empty.dispatchEvent(new Event('input', { bubbles: true })); return true; }
+  function getVideoUrlInputs() {
+    return Array.from(document.querySelectorAll('input[type="url"], input[type="text"]')).filter(el => {
+      if (el.closest('#gatoMultiServerModal')) return false;
+      const ph = (el.placeholder || "").toLowerCase();
+      const id = (el.id || "").toLowerCase();
+      if (id.includes("poster") || id.includes("backdrop") || id.includes("sub") || id.includes("tmdb") || id.includes("search")) return false;
+      return ph.includes("streamtape") || ph.includes(".mp4") || ph.includes("enlace") || ph.includes("https://");
+    });
+  }
+
+  function clickAddManualLinkBtn() {
+    const btns = Array.from(document.querySelectorAll('button')).filter(b => !b.closest('#gatoMultiServerModal'));
+    const addBtn = btns.find(b => (b.textContent || "").toLowerCase().includes("enlace manual"));
+    if (addBtn) {
+      addBtn.click();
+      return true;
+    }
     return false;
   }
 
-  window.msInsertOne = (encUrl) => {
+  function fillServerRow(embedUrl, srvKey) {
+    const srvName = SRV_LABELS[srvKey] || srvKey || "Servidor";
+    let urlInputs = getVideoUrlInputs();
+
+    // Evitar duplicar si ese enlace ya está en alguna caja
+    if (urlInputs.some(el => el.value.trim() === embedUrl.trim())) return true;
+
+    let targetUrlInput = urlInputs.find(el => !el.value.trim());
+
+    // Si no hay caja vacía, crear una nueva pulsando "+ Enlace manual"
+    if (!targetUrlInput && clickAddManualLinkBtn()) {
+      urlInputs = getVideoUrlInputs();
+      targetUrlInput = urlInputs.find(el => !el.value.trim()) || urlInputs[urlInputs.length - 1];
+    }
+
+    if (!targetUrlInput) return false;
+
+    // Poner la URL
+    targetUrlInput.value = embedUrl;
+    targetUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    targetUrlInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    // Buscar la caja del nombre del servidor dentro de la misma fila y rellenarla
+    const row = targetUrlInput.parentElement?.parentElement || targetUrlInput.parentElement;
+    if (row) {
+      const rowInputs = Array.from(row.querySelectorAll('input[type="text"], input:not([type])')).filter(el => el !== targetUrlInput);
+      if (rowInputs.length > 0) {
+        rowInputs[0].value = srvName;
+        rowInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+        rowInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    return true;
+  }
+
+  window.msInsertOne = (encUrl, srvKey) => {
     const url = decodeURIComponent(encUrl);
-    if (fillEmptyServerRow(url)) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(url); alert("Enlace copiado:\n" + url); }
+    if (fillServerRow(url, srvKey)) msCloseModal();
+    else if (navigator.clipboard) { navigator.clipboard.writeText(url); alert("Enlace copiado:
+" + url); }
   };
 
   window.msInsertAll = (encList) => {
     const list = JSON.parse(decodeURIComponent(encList));
-    let n = 0; list.forEach(i => { if (fillEmptyServerRow(i.embed)) n++; });
+    let n = 0;
+    list.forEach(i => { if (fillServerRow(i.embed, i.server)) n++; });
     if (n > 0) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(list.map(i => i.embed).join("\n")); alert("Enlaces copiados al portapapeles."); }
+    else if (navigator.clipboard) { navigator.clipboard.writeText(list.map(i => i.embed).join("
+")); alert("Enlaces copiados al portapapeles."); }
   };
 
   window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {

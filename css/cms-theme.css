@@ -321,3 +321,46 @@ body {
   .ms-grid-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .ms-grid-cards .ms-card { margin-bottom: 0; }
 }
+
+
+/* === FIXES DE CONTRASTE EN MODO CLARO === */
+body.gato-light .gh-dd-status {
+  background: #F1F5F9 !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+}
+body.gato-light .gh-dd-status *,
+body.gato-light .gh-dd-status span,
+body.gato-light .gh-dd-status div {
+  color: #0F172A !important;
+}
+body.gato-light .gh-dd-status button {
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  border: 1px solid #CBD5E1 !important;
+}
+/* Bloques con fondo oscuro inline (Subtítulos, Editando Título, etc.) */
+body.gato-light div[style*="#0"],
+body.gato-light div[style*="#1"],
+body.gato-light div[style*="rgb(1"],
+body.gato-light div[style*="rgb(2"] {
+  background: #FFFFFF !important;
+  background-color: #FFFFFF !important;
+  border-color: #CBD5E1 !important;
+  color: #0F172A !important;
+}
+body.gato-light div[style*="#0"] span,
+body.gato-light div[style*="#1"] span,
+body.gato-light div[style*="#0"] label,
+body.gato-light div[style*="#1"] label,
+body.gato-light div[style*="#0"] p,
+body.gato-light div[style*="#1"] p {
+  color: #0F172A !important;
+}
+/* Preservar botones de acento y píldoras de servidores */
+body.gato-light .ms-srv-pill:not(.missing),
+body.gato-light .ms-btn-primary,
+body.gato-light .ms-tab.active,
+body.gato-light .ms-chip.active {
+  color: #FFFFFF !important;
+}
