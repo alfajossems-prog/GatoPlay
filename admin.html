@@ -598,6 +598,28 @@ textarea.admin-input::placeholder {
     }
     .ms-grid-cards .ms-card { margin-bottom: 0; }
   }
+
+  #msQueueTray {
+    display: none;
+    background: var(--gt-surface);
+    border-top: 1px solid var(--gt-border-2);
+    padding: 8px 14px;
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.35);
+  }
+  .ms-tray-head {
+    display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; font-size: 12.5px; font-weight: 700;
+  }
+  .ms-tray-list {
+    display: flex; flex-direction: column; gap: 7px;
+    margin-top: 8px; max-height: 170px; overflow-y: auto;
+  }
+  .ms-tray-item {
+    background: var(--gt-surface-2); border: 1px solid var(--gt-border);
+    border-radius: 9px; padding: 7px 10px; font-size: 11.5px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+
 </style>
 <!-- GATO-THEME-END -->
 
@@ -2582,6 +2604,20 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     </div>
   </div>
+
+  <!-- Bandeja colapsable de transferencias en tiempo real -->
+  <div id="msQueueTray">
+    <div style="max-width:960px; margin:0 auto;">
+      <div class="ms-tray-head" onclick="msToggleTray()">
+        <span id="msTrayTitle">⏳ Transferencias en curso (0)</span>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="ms-btn" style="padding:3px 8px; font-size:11px;" onclick="event.stopPropagation(); msClearDoneTasks()">Limpiar</button>
+          <span id="msTrayArrow">▾</span>
+        </div>
+      </div>
+      <div id="msTrayList" class="ms-tray-list"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -2903,7 +2939,9 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.style.borderStyle = "solid";
         btn.style.borderColor = "#10b981";
         btn.style.color = "#10b981";
-        btn.textContent = "✓ Enviado";
+        btn.textContent = "✓ En cola";
+        const cardTitle = btn.closest(".ms-card")?.querySelector(".ms-card-title")?.textContent || "Video";
+        msEnqueueTask({ server: targetSrv, id: res.id || "", title: cardTitle });
       } else {
         btn.style.color = "#ef4444";
         btn.textContent = "✗ " + (res?.raw?.result?.msg || res?.error || "Error");
@@ -2929,6 +2967,9 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({ url, servers: targets })
       });
       const d = await r.json();
+      (d.results || []).forEach(res => {
+        if (res.ok) msEnqueueTask({ server: res.server, id: res.id || "", title: url.split("/").pop() || "Carga remota" });
+      });
       out.innerHTML = (d.results || []).map(res => `
         <div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;background:var(--gt-surface-2);font-size:12px;">
           <strong>${SRV_LABELS[res.server] || res.server}</strong>
@@ -3021,6 +3062,113 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("msUploadStatus").innerHTML = '<span style="color:#f59e0b;">Subida cancelada.</span>';
     }
   };
+
+  // === COLA Y MONITOREO EN TIEMPO REAL ===
+  let msTasks = [];
+  let msPollTimer = null;
+  let msTrayOpen = true;
+  try { msTasks = JSON.parse(localStorage.getItem("gato_remote_tasks") || "[]"); } catch(_) { msTasks = []; }
+
+  function saveTasks() { localStorage.setItem("gato_remote_tasks", JSON.stringify(msTasks.slice(-20))); }
+
+  window.msToggleTray = function() {
+    msTrayOpen = !msTrayOpen;
+    const list = document.getElementById("msTrayList");
+    const arr = document.getElementById("msTrayArrow");
+    if (list) list.style.display = msTrayOpen ? "flex" : "none";
+    if (arr) arr.textContent = msTrayOpen ? "▾" : "▴";
+  };
+
+  window.msClearDoneTasks = function() {
+    msTasks = msTasks.filter(t => t.state === "running");
+    saveTasks();
+    renderTray();
+  };
+
+  window.msEnqueueTask = function(task) {
+    msTasks.unshift({
+      uid: Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+      server: task.server,
+      id: task.id || "",
+      title: task.title || "Archivo",
+      state: task.id ? "running" : "processing",
+      pct: 0,
+      detail: task.id ? "Iniciando..." : "Procesando en servidor"
+    });
+    saveTasks();
+    msTrayOpen = true;
+    renderTray();
+    startPolling();
+  };
+
+  function renderTray() {
+    const tray = document.getElementById("msQueueTray");
+    const titleEl = document.getElementById("msTrayTitle");
+    const listEl = document.getElementById("msTrayList");
+    if (!tray || !listEl) return;
+    if (!msTasks.length) { tray.style.display = "none"; return; }
+    tray.style.display = "block";
+    const running = msTasks.filter(t => t.state === "running").length;
+    titleEl.textContent = running > 0 ? `⏳ Transferencias en curso (${running})` : `✓ Transferencias recientes (${msTasks.length})`;
+    listEl.style.display = msTrayOpen ? "flex" : "none";
+
+    listEl.innerHTML = msTasks.map(t => {
+      const lbl = SRV_LABELS[t.server] || t.server;
+      const col = SRV_COLORS[t.server] || "#0E5A6F";
+      const badge = t.state === "done"
+        ? '<span style="color:#10b981;font-weight:700;">✓ Listo</span>'
+        : (t.state === "error"
+          ? '<span style="color:#ef4444;font-weight:700;">✗ Error</span>'
+          : `<span style="color:var(--gt-muted);">${t.pct > 0 ? t.pct + "% • " : ""}${t.detail}</span>`);
+      return `<div class="ms-tray-item">
+        <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            <strong style="color:${col};">${lbl}</strong> · ${t.title}
+          </div>
+          ${badge}
+        </div>
+        ${t.state === "running" ? `<div class="ms-progress-track" style="height:6px;"><div class="ms-progress-fill" style="width:${Math.max(8, t.pct)}%;"></div></div>` : ""}
+      </div>`;
+    }).join("");
+  }
+
+  async function pollRemoteStatuses() {
+    const active = msTasks.filter(t => t.state === "running" && t.id);
+    if (!active.length || !getPass()) {
+      clearInterval(msPollTimer); msPollTimer = null;
+      return;
+    }
+    try {
+      const r = await fetch(WORKER_BASE + "/remote-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Panel-Pass": getPass() },
+        body: JSON.stringify({ tasks: active.map(t => ({ server: t.server, id: t.id })) })
+      });
+      const d = await r.json();
+      let anyFinished = false;
+      (d.statuses || []).forEach(st => {
+        const item = msTasks.find(t => t.id === st.id && t.server === st.server);
+        if (!item) return;
+        const prev = item.state;
+        item.state = st.state;
+        item.pct = st.pct || 0;
+        item.detail = st.detail || "";
+        if (prev !== "done" && st.state === "done") anyFinished = true;
+      });
+      saveTasks();
+      renderTray();
+      if (anyFinished) msLoadFiles();
+    } catch (_) {}
+  }
+
+  function startPolling() {
+    if (msPollTimer) return;
+    pollRemoteStatuses();
+    msPollTimer = setInterval(pollRemoteStatuses, 8000);
+  }
+
+  renderTray();
+  if (msTasks.some(t => t.state === "running" && t.id)) startPolling();
 })();
 </script>
 <!-- GATO-MS-END -->
