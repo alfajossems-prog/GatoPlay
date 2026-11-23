@@ -2287,6 +2287,25 @@ document.addEventListener("DOMContentLoaded", () => {
   </div>
 </div>
 
+
+  <!-- Mini-modal selector de servidor destino -->
+  <div id="msTransferModal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.75); backdrop-filter:blur(3px); align-items:center; justify-content:center; padding:16px;">
+    <div style="width:100%; max-width:380px; background:#121418; border:1px solid #232730; border-radius:14px; padding:16px; color:#F1F5F9; box-shadow:0 18px 40px rgba(0,0,0,0.65);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-size:14.5px; font-weight:700; color:#fff;">⇄ Transferir archivo</div>
+        <button type="button" onclick="msCloseTransferModal()" style="background:#181C24; border:1px solid #2A303C; color:#CBD5E1; border-radius:7px; padding:4px 9px; cursor:pointer; font-weight:700;">✕</button>
+      </div>
+      <div id="msTrFileName" style="font-size:12px; color:#94A3B8; background:#0A0B0E; border:1px solid #232730; border-radius:8px; padding:8px 10px; margin-bottom:12px; word-break:break-word;"></div>
+      <div style="font-size:12px; color:#CBD5E1; font-weight:600; margin-bottom:8px;">Elige a qué servidor(es) enviar:</div>
+      <div id="msTrTargets" style="display:flex; flex-direction:column; gap:7px; margin-bottom:14px;"></div>
+      <div id="msTrStatus" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;"></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+        <button type="button" onclick="msCloseTransferModal()" style="padding:10px; border-radius:9px; background:#181C24; border:1px solid #2A303C; color:#CBD5E1; font-size:12.5px; font-weight:600; cursor:pointer;">Cancelar</button>
+        <button type="button" id="msTrSendBtn" onclick="msConfirmTransfer()" style="padding:10px; border-radius:9px; background:#0E5A6F; border:1px solid #14748E; color:#fff; font-size:12.5px; font-weight:700; cursor:pointer;">🚀 Enviar</button>
+      </div>
+    </div>
+  </div>
+
 <script>
 (function() {
   const WORKER_BASE = "https://gato-uploader.josseanm.workers.dev";
@@ -2383,34 +2402,81 @@ document.addEventListener("DOMContentLoaded", () => {
     if (st) st.innerHTML = '<span style="color:#10b981;">✓ Agregado al título: ' + label + '</span>';
   };
 
-  // Clonar / Pasar un archivo a los demás servidores activos
-  window.msMirrorFile = async function(btnEl, fromSrv, embedUrl) {
+  // Selector de servidor destino para transferir archivo
+  let msCurrentTransfer = null;
+
+  window.msOpenTransferModal = function(fromSrv, embedUrl, title) {
+    msCurrentTransfer = { fromSrv, embedUrl, title };
+    const modal = document.getElementById("msTransferModal");
+    const nameEl = document.getElementById("msTrFileName");
+    const box = document.getElementById("msTrTargets");
+    const st = document.getElementById("msTrStatus");
+    const btn = document.getElementById("msTrSendBtn");
+    if (!modal || !box) return;
+
+    if (nameEl) nameEl.textContent = (SRV_LABELS[fromSrv] || fromSrv) + " → " + (title || embedUrl);
+    if (st) st.innerHTML = "";
+    if (btn) { btn.disabled = false; btn.textContent = "🚀 Enviar"; }
+
+    const candidates = ["voe", "streamtape", "mixdrop", "doodstream"].filter(k => k !== fromSrv && activeServersMap[k]);
+    if (!candidates.length) {
+      box.innerHTML = '<div style="font-size:12px;color:#f59e0b;">No hay otros servidores activos configurados.</div>';
+    } else {
+      box.innerHTML = candidates.map(k => {
+        const col = SRV_COLORS[k] || "#0E5A6F";
+        const lbl = SRV_LABELS[k] || k;
+        const txtCol = (k === "mixdrop") ? "#111" : "#fff";
+        return `<label style="display:flex;align-items:center;gap:10px;background:#0A0B0E;border:1px solid #232730;padding:10px 12px;border-radius:9px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" class="ms-tr-chk" value="${k}" checked style="width:16px;height:16px;accent-color:#14748E;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:${col};color:${txtCol};font-size:11px;font-weight:900;">${lbl.charAt(0)}</span>
+          <span style="font-weight:600;color:#F1F5F9;">${lbl}</span>
+        </label>`;
+      }).join("");
+    }
+    modal.style.display = "flex";
+  };
+
+  window.msCloseTransferModal = function() {
+    const modal = document.getElementById("msTransferModal");
+    if (modal) modal.style.display = "none";
+  };
+
+  window.msConfirmTransfer = async function() {
+    if (!msCurrentTransfer) return;
     const pass = getPass();
+    const st = document.getElementById("msTrStatus");
+    const btn = document.getElementById("msTrSendBtn");
+    const targets = Array.from(document.querySelectorAll(".ms-tr-chk:checked")).map(c => c.value);
     if (!pass) { alert("Configura tu contraseña en ⚙️"); return; }
-    const targets = Object.keys(activeServersMap).filter(k => activeServersMap[k] && k !== fromSrv);
-    if (!targets.length) { alert("No hay otros servidores activos para clonar."); return; }
-    const origText = btnEl.textContent;
-    btnEl.disabled = true;
-    btnEl.textContent = "Enviando...";
+    if (!targets.length) { alert("Selecciona al menos un servidor destino."); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Enviando...";
+    st.innerHTML = '<div style="font-size:12px;color:#94A3B8;">Enviando solicitud de transferencia...</div>';
     try {
       const r = await fetch(WORKER_BASE + "/remote", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Panel-Pass": pass },
-        body: JSON.stringify({ url: embedUrl, servers: targets })
+        body: JSON.stringify({ url: msCurrentTransfer.embedUrl, servers: targets })
       });
       const d = await r.json();
-      const okList = (d.results || []).filter(x => x.ok).map(x => SRV_LABELS[x.server] || x.server);
-      if (okList.length) {
-        btnEl.style.background = "#065f46";
-        btnEl.style.borderColor = "#10b981";
-        btnEl.textContent = "✓ " + okList.join(", ");
-      } else {
-        btnEl.textContent = "✗ Sin respuesta";
-        setTimeout(() => { btnEl.textContent = origText; btnEl.disabled = false; }, 2500);
+      if (!d.ok) {
+        st.innerHTML = '<div style="font-size:12px;color:#ef4444;">✗ ' + (d.error || "Error") + '</div>';
+        btn.disabled = false; btn.textContent = "🚀 Reintentar";
+        return;
       }
+      st.innerHTML = (d.results || []).map(res => {
+        const lbl = SRV_LABELS[res.server] || res.server;
+        const msg = res.ok
+          ? '<span style="color:#10b981;font-weight:700;">✓ Enviado</span>'
+          : '<span style="color:#ef4444;font-weight:700;">✗ ' + (res.raw?.result?.msg || res.error || "Rechazado") + '</span>';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;background:#0A0B0E;border:1px solid #232730;padding:7px 10px;border-radius:8px;font-size:12px;"><strong>${lbl}</strong>${msg}</div>`;
+      }).join("");
+      btn.textContent = "✓ Listo";
+      setTimeout(() => { btn.disabled = false; btn.textContent = "🚀 Enviar"; }, 1800);
     } catch (e) {
-      btnEl.textContent = "✗ Error";
-      setTimeout(() => { btnEl.textContent = origText; btnEl.disabled = false; }, 2500);
+      st.innerHTML = '<div style="font-size:12px;color:#ef4444;">✗ ' + e.message + '</div>';
+      btn.disabled = false; btn.textContent = "🚀 Reintentar";
     }
   };
 
@@ -2484,7 +2550,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <span style="color:#F1F5F9;font-size:12.5px;line-height:1.35;word-break:break-word;">${safeTitle}</span>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;">
-          <button type="button" onclick="msMirrorFile(this,'${f.server}','${f.embed}')" style="background:#181C24;border:1px solid #2A303C;color:#CBD5E1;border-radius:7px;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">⇄ Pasar a otros</button>
+          <button type="button" onclick="msOpenTransferModal('${f.server}', decodeURIComponent('${encodeURIComponent(f.embed)}'), decodeURIComponent('${encodeURIComponent(f.title || '')}'))" style="background:#181C24;border:1px solid #2A303C;color:#CBD5E1;border-radius:7px;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;">⇄ Pasar a...</button>
           <button type="button" onclick="msAddEmbedToForm('${f.server}','${f.embed}')" style="background:#0E5A6F;border:1px solid #14748E;color:#fff;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;">+ Usar Embed</button>
         </div>
       </div>`;
