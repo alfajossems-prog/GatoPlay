@@ -524,5 +524,125 @@
 <script src="js/cms-core.js?v=1795451804"></script>
 <script src="js/cms-servers.js?v=1795451804"></script>
 
+
+<!-- === MÓDULO DE AUTO-ACTUALIZACIÓN GATO PLAY === -->
+<section id="gatoUpdaterPanel" style="max-width:960px;margin:24px auto;padding:20px;background:#121418;border:1px solid #232730;border-radius:14px;color:#F1F5F9;font-family:system-ui,-apple-system,sans-serif;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+    <h2 style="margin:0;font-size:18px;color:#FFFFFF;">🚀 Lanzar Actualización de App (Gato Play)</h2>
+    <span id="guCurrentBadge" style="font-size:12px;padding:4px 10px;border-radius:999px;background:#0E5A6F;color:#E0F2FE;">Cargando versión...</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:12px;">
+    <div>
+      <label style="display:block;font-size:12px;color:#94A3B8;margin-bottom:4px;">versionCode (número entero)</label>
+      <input id="guVersionCode" type="number" min="1" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #232730;background:#0A0B0E;color:#fff;" />
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#94A3B8;margin-bottom:4px;">versionName (ej. 1.0.2)</label>
+      <input id="guVersionName" type="text" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #232730;background:#0A0B0E;color:#fff;" />
+    </div>
+  </div>
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;color:#94A3B8;margin-bottom:4px;">URL del APK (GitHub Releases)</label>
+    <input id="guApkUrl" type="url" value="https://github.com/alfajossems-prog/GatoPlay/releases/latest/download/GatoPlay_Hibrido.apk" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #232730;background:#0A0B0E;color:#fff;" />
+  </div>
+  <div style="margin-bottom:12px;">
+    <label style="display:block;font-size:12px;color:#94A3B8;margin-bottom:4px;">Novedades (Changelog que verán los usuarios)</label>
+    <textarea id="guChangelog" rows="3" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid #232730;background:#0A0B0E;color:#fff;" placeholder="Ej. Mejoras en el buscador y corrección de errores."></textarea>
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#CBD5E1;margin-bottom:16px;cursor:pointer;">
+    <input id="guForce" type="checkbox" /> Actualización obligatoria (bloquea el botón "Más tarde")
+  </label>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <button id="guPublishBtn" type="button" style="padding:11px 22px;border:none;border-radius:10px;background:#14748E;color:#fff;font-weight:700;cursor:pointer;">Lanzar Actualización</button>
+    <span id="guStatus" style="font-size:13px;color:#94A3B8;"></span>
+  </div>
+</section>
+<script>
+(function(){
+  const REPO = "alfajossems-prog/GatoPlay";
+  const FILE = "version.json";
+  let currentSha = null;
+
+  function findGhToken() {
+    for (let i = 0; i < localStorage.length; i++) {
+      const val = String(localStorage.getItem(localStorage.key(i)) || "").trim();
+      if (val.startsWith("ghp_") || val.startsWith("github_pat_")) return val;
+    }
+    const inp = document.querySelector("input[id*='token' i], input[id*='gh' i], input[placeholder*='ghp_' i]");
+    return inp ? inp.value.trim() : "";
+  }
+
+  async function loadCurrentVersion() {
+    const badge = document.getElementById("guCurrentBadge");
+    try {
+      const r = await fetch("https://alfajossems-prog.github.io/GatoPlay/version.json?t=" + Date.now(), { cache: "no-store" });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      document.getElementById("guVersionCode").value = d.versionCode || 1;
+      document.getElementById("guVersionName").value = d.versionName || "1.0.0";
+      document.getElementById("guApkUrl").value = d.apkUrl || "https://github.com/alfajossems-prog/GatoPlay/releases/latest/download/GatoPlay_Hibrido.apk";
+      document.getElementById("guChangelog").value = d.changelog || "";
+      document.getElementById("guForce").checked = Boolean(d.forceUpdate);
+      badge.textContent = "Activa: v" + (d.versionName || "1.0.0") + " (código " + (d.versionCode || 1) + ")";
+    } catch (_) {
+      badge.textContent = "Sin version.json publicado";
+    }
+  }
+
+  document.getElementById("guPublishBtn").addEventListener("click", async () => {
+    const status = document.getElementById("guStatus");
+    const token = findGhToken();
+    if (!token) {
+      status.style.color = "#F87171";
+      status.textContent = "❌ Configura primero tu token de GitHub en Gato CMS.";
+      return;
+    }
+    const payload = {
+      versionCode: parseInt(document.getElementById("guVersionCode").value, 10) || 1,
+      versionName: document.getElementById("guVersionName").value.trim() || "1.0.0",
+      changelog: document.getElementById("guChangelog").value.trim() || "Mejoras y correcciones.",
+      apkUrl: document.getElementById("guApkUrl").value.trim(),
+      forceUpdate: document.getElementById("guForce").checked
+    };
+
+    status.style.color = "#38BDF8";
+    status.textContent = "Publicando version.json en GitHub...";
+    try {
+      const getR = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
+        headers: { Authorization: `token ${token}`, Accept: "application/vnd.github+json" }
+      });
+      if (getR.ok) {
+        const meta = await getR.json();
+        currentSha = meta.sha;
+      }
+      const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
+      const putR = await fetch(`https://api.github.com/repos/${REPO}/contents/${FILE}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: `Release Gato Play v${payload.versionName} (${payload.versionCode})`,
+          content: b64,
+          sha: currentSha || undefined
+        })
+      });
+      if (!putR.ok) throw new Error("GitHub respondió " + putR.status);
+      status.style.color = "#4ADE80";
+      status.textContent = "✅ ¡Actualización lanzada! En ~30s les saldrá a todos en Gato Play.";
+      document.getElementById("guCurrentBadge").textContent = "Activa: v" + payload.versionName + " (código " + payload.versionCode + ")";
+    } catch (e) {
+      status.style.color = "#F87171";
+      status.textContent = "❌ Error: " + e.message;
+    }
+  });
+
+  loadCurrentVersion();
+})();
+</script>
+<!-- === FIN MÓDULO AUTO-ACTUALIZACIÓN === -->
+
 </body>
 </html>
