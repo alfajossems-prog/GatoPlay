@@ -48,6 +48,7 @@ async function handleGatoCmsLogin(ev) {
             localStorage.setItem("gato_cms_auth_exp", String(Date.now() + sevenDaysMs));
             await syncPanelConfigFromWorker(pass);
             document.getElementById("gatoCmsLoginGate")?.classList.add("unlocked");
+            location.reload();
         } else {
             if (errEl) errEl.textContent = "Usuario o contraseña incorrectos.";
         }
