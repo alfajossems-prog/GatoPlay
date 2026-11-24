@@ -8,6 +8,10 @@
 
   <link rel="stylesheet" href="css/cms-base.css?v=1795451804">
   <link rel="stylesheet" href="css/cms-theme.css?v=1795451804">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0A0B0E">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/gpp-192.png">
+  <link rel="apple-touch-icon" href="icons/gpp-192.png">
 </head>
 <body style="padding-top: 66px;">
 
@@ -645,5 +649,10 @@
 </script>
 <!-- === FIN MÓDULO AUTO-ACTUALIZACIÓN === -->
 
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
+}
+</script>
 </body>
 </html>
