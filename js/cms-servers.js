@@ -433,7 +433,10 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
     if (!file) { alert("Selecciona un archivo de video."); return; }
     st.textContent = ""; box.style.display = "flex"; bar.style.width = "0%"; pctEl.textContent = "0%"; detEl.textContent = "Obteniendo servidor..."; upBtn.disabled = true; cancelBtn.style.display = "inline-block";
     try {
-      const r = await fetch(WORKER_BASE + "/upload-url?server=" + encodeURIComponent(srv), { headers: { "X-Panel-Pass": getPass() } });
+      const ctrl = new AbortController();
+      const tOut = setTimeout(() => ctrl.abort(), 15000);
+      const r = await fetch(WORKER_BASE + "/upload-url?server=" + encodeURIComponent(srv), { headers: { "X-Panel-Pass": getPass() }, signal: ctrl.signal });
+      clearTimeout(tOut);
       const d = await r.json();
       if (!d.ok || !d.uploadUrl) throw new Error(d.error || "No se obtuvo URL");
       const fd = new FormData();
@@ -459,6 +462,7 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
         activeXhr = null;
       };
       activeXhr.onerror = () => { upBtn.disabled = false; cancelBtn.style.display = "none"; st.innerHTML = '<span style="color:#ef4444;font-weight:700;">Error de red o CORS.</span>'; activeXhr = null; };
+      detEl.textContent = "Conectando con " + (SRV_LABELS[srv] || srv) + "...";
       activeXhr.send(fd);
     } catch (e) { upBtn.disabled = false; cancelBtn.style.display = "none"; st.innerHTML = '<span style="color:#ef4444;font-weight:700;">' + e.message + '</span>'; }
   };
