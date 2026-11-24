@@ -381,6 +381,15 @@
     } catch (e) { out.innerHTML = '<div style="color:#ef4444;font-size:12px;">Error: ' + e.message + '</div>'; }
   };
 
+  
+  document.addEventListener("change", (ev) => {
+    if (ev.target && ev.target.id === "msUploadFile") {
+      const f = ev.target.files && ev.target.files[0];
+      const nameEl = document.getElementById("msUploadName");
+      if (f && nameEl) nameEl.value = f.name;
+    }
+  });
+
   window.msStartUpload = async function() {
     const srv = document.getElementById("msUploadServer").value, file = document.getElementById("msUploadFile").files[0];
     const st = document.getElementById("msUploadStatus"), box = document.getElementById("msUploadProgressBox");
@@ -394,7 +403,12 @@
       if (!d.ok || !d.uploadUrl) throw new Error(d.error || "No se obtuvo URL");
       const fd = new FormData();
       if (d.extraFields) Object.entries(d.extraFields).forEach(([k, v]) => fd.append(k, v));
-      fd.append(d.fieldName || "file", file);
+      const nameEl = document.getElementById("msUploadName");
+      const rawName = (nameEl ? nameEl.value.trim() : "") || file.name;
+      const extMatch = file.name.match(/(\.[a-z0-9]{2,5})$/i);
+      const ext = extMatch ? extMatch[1] : ".mp4";
+      const finalName = /\.[a-z0-9]{2,5}$/i.test(rawName) ? rawName : (rawName + ext);
+      fd.append(d.fieldName || "file", file, finalName);
       const t0 = Date.now();
       activeXhr = new XMLHttpRequest();
       activeXhr.open("POST", d.uploadUrl, true);
