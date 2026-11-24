@@ -17,6 +17,22 @@ async function _sha256Hex(text) {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function syncPanelConfigFromWorker(pass) {
+    if (!pass) return;
+    try {
+        const res = await fetch("https://gato-uploader.josseanm.workers.dev/panel-config", {
+            method: "GET",
+            headers: { "X-Panel-Pass": pass }
+        });
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (!cfg || !cfg.ok) return;
+        if (cfg.ghToken) localStorage.setItem("gh_token", cfg.ghToken);
+        if (cfg.tmdbKey) localStorage.setItem("tmdb_api_key", cfg.tmdbKey);
+        if (cfg.panelPass) localStorage.setItem("gato_worker_pass", cfg.panelPass);
+    } catch (_) {}
+}
+
 async function handleGatoCmsLogin(ev) {
     ev.preventDefault();
     const user = (document.getElementById("cmsLoginUser")?.value || "").trim();
@@ -30,6 +46,7 @@ async function handleGatoCmsLogin(ev) {
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
             localStorage.setItem("gato_cms_auth_hash", digest);
             localStorage.setItem("gato_cms_auth_exp", String(Date.now() + sevenDaysMs));
+            await syncPanelConfigFromWorker(pass);
             document.getElementById("gatoCmsLoginGate")?.classList.add("unlocked");
         } else {
             if (errEl) errEl.textContent = "Usuario o contraseña incorrectos.";
