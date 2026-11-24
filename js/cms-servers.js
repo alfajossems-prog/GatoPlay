@@ -333,21 +333,56 @@
     return true;
   }
 
-  window.msInsertOne = (encUrl, srvKey) => {
+  window.msInsertOne = async (encUrl, srvKey) => {
     const url = decodeURIComponent(encUrl);
-    if (fillServerRow(url, srvKey)) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(url); alert("Enlace copiado: " + url); }
+    const label = SRV_LABELS[srvKey] || srvKey || "Servidor";
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        ta.remove();
+      }
+      alert("Enlace de " + label + " copiado:\n" + url);
+    } catch (_) {
+      prompt("Copia el enlace de " + label + ":", url);
+    }
   };
 
   window.msInsertAll = (encList) => {
     const list = JSON.parse(decodeURIComponent(encList));
-    let n = 0;
-    list.forEach(i => { if (fillServerRow(i.embed, i.server)) n++; });
-    if (n > 0) msCloseModal();
-    else if (navigator.clipboard) { navigator.clipboard.writeText(list.map(i => i.embed).join(String.fromCharCode(10))); alert("Enlaces copiados al portapapeles."); }
-  };
+    const byKey = {};
+    list.forEach(item => {
+      const k = (item.server || "").toLowerCase();
+      if (k.includes("voe")) byKey.voe = item.embed || "";
+      else if (k.includes("mixdrop")) byKey.mixdrop = item.embed || "";
+      else if (k.includes("streamtape")) byKey.streamtape = item.embed || "";
+    });
 
-  window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
+    const fixedSlots = [
+      { name: "VOE", url: byKey.voe || "", quality: "1080p" },
+      { name: "Mixdrop", url: byKey.mixdrop || "", quality: "1080p" },
+      { name: "Streamtape", url: byKey.streamtape || "", quality: "1080p" }
+    ];
+
+    const container = document.getElementById("dynamicServersContainer");
+    if (container && typeof window.addServerInputRow === "function") {
+      container.innerHTML = "";
+      fixedSlots.forEach(slot => window.addServerInputRow(slot.name, slot.url, slot.quality));
+      msCloseModal();
+    } else if (navigator.clipboard) {
+      const urls = fixedSlots.map(s => s.url).filter(Boolean).join("\n");
+      navigator.clipboard.writeText(urls);
+      alert("Enlaces copiados al portapapeles.");
+    }
+  };
+window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
     const url = decodeURIComponent(encSourceUrl), orig = btn.innerHTML;
     btn.disabled = true; btn.textContent = "Enviando...";
     try {

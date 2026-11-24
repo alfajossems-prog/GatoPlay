@@ -359,23 +359,37 @@ const STORAGE_KEY = "gatoplay_catalog_db";
         }
 
         function addServerInputRow(nameVal, urlVal, qualityVal) {
-            const container = document.getElementById("dynamicServersContainer");
-            const idx = container.children.length + 1;
-            const div = document.createElement("div");
-            div.className = "server-pair-box srv-input-item";
-            div.innerHTML = `
-                <div class="form-grid" style="margin-bottom:8px;">
-                    <input type="text" class="admin-input srv-name-field" value="${escapeAttr(nameVal || 'Streamtape')}" placeholder="Servidor (Ej: Streamtape)">
-                    <input type="text" class="admin-input srv-qual-field" value="${escapeAttr(qualityVal || '1080p')}" placeholder="1080p">
-                </div>
-                <input type="text" class="admin-input srv-url-field" value="${escapeAttr(urlVal || '')}" placeholder="https://streamtape.com/v/... o enlace .mp4">
-                ${idx > 1 ? `
-                <button type="button" class="btn-danger" style="width:100%; margin-top:8px; padding:7px;" onclick="this.closest('.srv-input-item').remove()">
-                    ${SVG_TRASH} <span>Quitar este enlace</span>
-                </button>` : ''}
-            `;
-            container.appendChild(div);
-        }
+    const container = document.getElementById("dynamicServersContainer");
+    const idx = container.children.length + 1;
+    const div = document.createElement("div");
+    div.className = "server-pair-box srv-input-item";
+
+    const rawName = (nameVal || "VOE").trim();
+    const low = rawName.toLowerCase();
+    const normalized = low.includes("voe") ? "VOE"
+      : low.includes("mixdrop") ? "Mixdrop"
+      : low.includes("streamtape") ? "Streamtape"
+      : rawName;
+
+    const opts = ["VOE", "Mixdrop", "Streamtape"];
+    if (normalized && !opts.includes(normalized)) opts.push(normalized);
+    const optionsHtml = opts.map(o =>
+      `<option value="${escapeAttr(o)}"${o === normalized ? " selected" : ""}>${escapeAttr(o)}</option>`
+    ).join("");
+
+    div.innerHTML = `
+        <div class="form-grid" style="margin-bottom:8px;">
+            <select class="admin-input srv-name-field">${optionsHtml}</select>
+            <input type="text" class="admin-input srv-qual-field" value="${escapeAttr(qualityVal || "1080p")}" placeholder="1080p">
+        </div>
+        <input type="text" class="admin-input srv-url-field" value="${escapeAttr(urlVal || "")}" placeholder="https://... o enlace .mp4">
+        ${idx > 1 ? `
+        <button type="button" class="btn-danger" style="width:100%; margin-top:8px; padding:7px;" onclick="this.closest('.srv-input-item').remove()">
+            ${SVG_TRASH} <span>Quitar este enlace</span>
+        </button>` : ""}
+    `;
+    container.appendChild(div);
+}
 
         function collectServerInputs(defaultQuality) {
             const rows = document.querySelectorAll("#dynamicServersContainer .srv-input-item");
