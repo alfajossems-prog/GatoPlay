@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.6",
-  "changelog": "Buscador adaptativo para móvil/tablet/TV y mejoras de diseño.",
+  "versionCode": 7,
+  "versionName": "1.0.7",
+  "changelog": "Se mejoró el tiempo de carga del reproductor",
   "apkUrl": "https://github.com/alfajossems-prog/GatoPlay/releases/latest/download/GatoPlay_Hibrido.apk",
   "forceUpdate": true
 }
