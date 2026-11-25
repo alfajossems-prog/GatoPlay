@@ -207,9 +207,13 @@ const STORAGE_KEY = "gatoplay_catalog_db";
             } catch (e) {}
 
             // 2. Si el usuario tiene GitHub Token configurado, subir catalogo.json directo a su repo
-            const ghToken = localStorage.getItem("gh_token");
-            const { owner, repo } = inferGithubRepoFromUrl();
-            if (!ghToken || !owner || !repo) return true;
+            const ghToken = (localStorage.getItem("gh_token") || "").trim();
+        const owner = (localStorage.getItem("gh_user") || "alfajossems-prog").trim();
+        const repo = "gatoplay-db";
+        if (!ghToken) {
+            alert("Error: Falta el GitHub Token (gh_token). Cierra sesión y vuelve a entrar.");
+            return false;
+        }
 
             try {
                 const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/catalogo.json`;
@@ -237,7 +241,12 @@ const STORAGE_KEY = "gatoplay_catalog_db";
                         sha
                     })
                 });
-                return putRes.ok;
+                if (!putRes.ok) {
+                const errTxt = await putRes.text().catch(() => "");
+                alert("Error guardando en GitHub (HTTP " + putRes.status + "): " + errTxt.slice(0, 140));
+                return false;
+            }
+            return true;
             } catch (e) {
                 return false;
             }
@@ -839,14 +848,16 @@ const STORAGE_KEY = "gatoplay_catalog_db";
 
         async function deleteCatalogItem(id) {
             if (!confirm("¿Eliminar este título del catálogo?")) return;
-            currentDb.items = (currentDb.items || []).filter(i => String(i.id) !== String(id));
+            const prevItems = [...(currentDb.items || [])];
+    currentDb.items = prevItems.filter(i => String(i.id) !== String(id));
 
-            try {
-                await fetch("/api/delete-item/" + encodeURIComponent(id), { method: "DELETE" });
-            } catch (e) {}
-
-            await pushDatabaseToCloudAndServer();
-            renderAdminList();
+    const saved = await pushDatabaseToCloudAndServer();
+    if (!saved) {
+        currentDb.items = prevItems;
+        renderAdminList();
+        return;
+    }
+    renderAdminList();
 
             const currentQ = document.getElementById("tmdbQuery").value.trim();
             if (currentQ.length >= 2) searchTmdb(currentQ);
