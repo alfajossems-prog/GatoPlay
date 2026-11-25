@@ -32,7 +32,6 @@
     const urlStr = typeof input === "string" ? input : (input?.url || "");
     const method = (init?.method || "GET").toUpperCase();
 
-    // 1. Capturar contraseña exacta del admin (GatoPlay o Mauricio) en login
     if (urlStr.includes("/panel-config")) {
       const hdrPass =
         init?.headers?.["X-Panel-Pass"] ||
@@ -45,7 +44,6 @@
     const res = await origFetch(input, init);
 
     try {
-      // 2. Registrar carga remota
       if (urlStr.includes(WORKER + "/remote") && method === "POST" && res.ok) {
         const body = JSON.parse(init.body || "{}");
         const srvs = Array.isArray(body.servers) ? body.servers.join(", ") : "";
@@ -53,7 +51,6 @@
         sendAudit("remote_upload", name, srvs);
       }
 
-      // 3. Registrar subida directa de archivo
       if (urlStr.includes(WORKER + "/upload-url") && res.ok) {
         const u = new URL(urlStr, location.origin);
         const srv = u.searchParams.get("server") || "";
@@ -64,7 +61,6 @@
         sendAudit("upload_file", fname, srv, fsize);
       }
 
-      // 4. Registrar título agregado/editado en catalogo.json
       if (
         urlStr.includes("api.github.com/repos/alfajossems-prog/gatoplay-db/contents/catalogo.json") &&
         method === "PUT" &&
@@ -79,28 +75,37 @@
     return res;
   };
 
-  // Botón directo a Panel Pro en admin.html
+  // Insertar botón "Panel Pro" dentro del menú desplegable (debajo de Notificaciones)
+  function injectMenuButton() {
+    if (document.getElementById("menuBtnPanelPro")) return;
+    const candidates = Array.from(document.querySelectorAll("button, a, div[onclick]"));
+    const notifBtn = candidates.find(
+      (el) => el.textContent && el.textContent.trim() === "Notificaciones"
+    );
+    if (!notifBtn || !notifBtn.parentElement) return;
+
+    const btn = document.createElement("button");
+    btn.id = "menuBtnPanelPro";
+    btn.type = "button";
+    btn.className = notifBtn.className;
+    btn.style.cssText = notifBtn.style.cssText;
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+        <line x1="18" y1="20" x2="18" y2="10"></line>
+        <line x1="12" y1="20" x2="12" y2="4"></line>
+        <line x1="6" y1="20" x2="6" y2="14"></line>
+      </svg>
+      <span>Panel Pro</span>
+    `;
+    btn.onclick = () => {
+      window.location.href = "dashboard.html";
+    };
+
+    notifBtn.insertAdjacentElement("afterend", btn);
+  }
+
   window.addEventListener("DOMContentLoaded", () => {
-    if (document.getElementById("btnGatoProDash")) return;
-    const a = document.createElement("a");
-    a.id = "btnGatoProDash";
-    a.href = "dashboard.html";
-    a.textContent = "📊 Panel Pro";
-    Object.assign(a.style, {
-      position: "fixed",
-      bottom: "16px",
-      right: "16px",
-      zIndex: "9999",
-      background: "#0E5A6F",
-      color: "#fff",
-      padding: "10px 15px",
-      borderRadius: "999px",
-      fontSize: "13px",
-      fontWeight: "700",
-      textDecoration: "none",
-      border: "1px solid #14748E",
-      boxShadow: "0 6px 18px rgba(0,0,0,0.45)",
-    });
-    document.body.appendChild(a);
+    injectMenuButton();
+    setTimeout(injectMenuButton, 600);
   });
 })();
