@@ -938,7 +938,6 @@ const STORAGE_KEY = "gatoplay_catalog_db";
         window.deleteCatalogItem = toggleHideCatalogItem;
             const currentQ = document.getElementById("tmdbQuery").value.trim();
             if (currentQ.length >= 2) searchTmdb(currentQ);
-        }
 
         async function saveHeroConfig() {
             const hero_mode = document.getElementById("cfgHeroMode").value;
