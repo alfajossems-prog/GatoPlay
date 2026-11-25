@@ -458,6 +458,7 @@ function msEnsureUploadUI() {
   const fileEl = document.getElementById("msUploadFile");
   if (!fileEl || fileEl.dataset.minimalReady) return;
   fileEl.dataset.minimalReady = "1";
+  fileEl.removeAttribute("accept");
   fileEl.style.display = "none";
 
   const picker = document.createElement("button");
