@@ -52,7 +52,7 @@
       min-width: 0 !important;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
     }
     .gato-card-head {
       display: flex;
@@ -88,30 +88,23 @@
     .gato-audit-grid {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 3px;
       margin-top: 4px;
       padding-top: 6px;
       border-top: 1px solid rgba(255,255,255,0.06);
       font-size: 11.5px;
-      color: #94A3B8;
+      color: #8B95A5;
     }
     .gato-audit-line {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 5px;
-    }
-    .gato-user-badge {
-      display: inline-flex;
-      align-items: center;
       gap: 4px;
-      padding: 1px 7px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 700;
+      line-height: 1.35;
     }
-    .gato-user-gp { background: rgba(20, 116, 142, 0.22); color: #67D4F1; }
-    .gato-user-ma { background: rgba(99, 102, 241, 0.22); color: #A5B4FC; }
+    .gato-user-txt { font-weight: 700; }
+    .gato-user-gp { color: #38BDF8; }
+    .gato-user-ma { color: #A5B4FC; }
     .saved-item-row .action-pair {
       display: grid !important;
       grid-template-columns: 1fr 1.25fr !important;
@@ -151,15 +144,67 @@
     .ms-user-tag {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 7px;
-      border-radius: 6px;
+      padding: 1px 6px;
+      border-radius: 5px;
       font-size: 11px;
       font-weight: 700;
-      background: rgba(20, 116, 142, 0.22);
-      color: #67D4F1;
-      border: 1px solid rgba(20, 116, 142, 0.35);
+      background: rgba(20, 116, 142, 0.18);
+      color: #38BDF8;
     }
+    /* Modal de confirmación Gato CMS */
+    .gato-confirm-ov {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(10, 11, 14, 0.82);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .gato-confirm-box {
+      width: 100%;
+      max-width: 360px;
+      background: #121418;
+      border: 1px solid #232730;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      color: #E8ECF2;
+    }
+    .gato-confirm-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .gato-confirm-desc {
+      font-size: 13px;
+      color: #94A3B8;
+      line-height: 1.45;
+    }
+    .gato-confirm-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 6px;
+    }
+    .gato-confirm-btn {
+      height: 40px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #232730;
+    }
+    .gato-confirm-cancel { background: #1A1D24; color: #CBD5E1; }
+    .gato-confirm-hide { background: #B45309; border-color: #D97706; color: #fff; }
+    .gato-confirm-show { background: #047857; border-color: #10B981; color: #fff; }
   </style>
 
 </head>
@@ -676,7 +721,7 @@
     </div>
   </div>
 </div>
-<script src="js/cms-core.js?v=1795636894"></script>
+<script src="js/cms-core.js?v=1795637484"></script>
 <script src="js/cms-servers.js?v=1795635802"></script>
 
 

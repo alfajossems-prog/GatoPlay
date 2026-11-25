@@ -17,14 +17,35 @@ function formatGatoDate(iso) {
   if (!iso) return "Sin registro";
   try {
     return new Date(iso).toLocaleString("es-MX", {
-      day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit"
+      day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false
     });
   } catch { return String(iso).slice(0, 16); }
 }
 function renderAdminBadge(name) {
   const n = name || "GatoPlay";
   const cls = n.toLowerCase().includes("mauricio") ? "gato-user-ma" : "gato-user-gp";
-  return `<span class="gato-user-badge ${cls}">👤 ${n}</span>`;
+  return `<span class="gato-user-txt ${cls}">${n}</span>`;
+}
+function showGatoConfirm({ title, desc, confirmText, isShow }) {
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.className = "gato-confirm-ov";
+    ov.innerHTML = `
+      <div class="gato-confirm-box">
+        <div class="gato-confirm-title">${isShow ? SVG_EYE_ON : SVG_EYE_OFF} <span>${title}</span></div>
+        <div class="gato-confirm-desc">${desc}</div>
+        <div class="gato-confirm-actions">
+          <button type="button" class="gato-confirm-btn gato-confirm-cancel" id="gConfNo">Cancelar</button>
+          <button type="button" class="gato-confirm-btn ${isShow ? 'gato-confirm-show' : 'gato-confirm-hide'}" id="gConfYes">${confirmText}</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(ov);
+    const close = (val) => { ov.remove(); resolve(val); };
+    ov.querySelector("#gConfNo").onclick = () => close(false);
+    ov.querySelector("#gConfYes").onclick = () => close(true);
+    ov.onclick = (e) => { if (e.target === ov) close(false); };
+  });
 }
 const SVG_EYE_OFF = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
 const SVG_EYE_ON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
@@ -907,7 +928,7 @@ const STORAGE_KEY = "gatoplay_catalog_db";
                                 <p style="margin:0;font-size:12px;color:#94A3B8;">${escapeAttr(item.year || '2026')} • ${linksCount}</p>
                                 <div class="gato-audit-grid">
                                     <div class="gato-audit-line"><span>Subida por:</span> ${renderAdminBadge(createdBy)}</div>
-                                    <div class="gato-audit-line"><span>Última act:</span> <b>${updatedAt}</b> ${renderAdminBadge(updatedBy)}</div>
+                                    <div class="gato-audit-line"><span>Última act:</span> <b style="color:#CBD5E1;">${updatedAt}</b> <span>•</span> ${renderAdminBadge(updatedBy)}</div>
                                 </div>
                             </div>
                         </div>
@@ -926,6 +947,16 @@ const STORAGE_KEY = "gatoplay_catalog_db";
             const target = (currentDb.items || []).find(i => String(i.id) === String(id));
             if (!target) return;
             const prevHidden = Boolean(target.hidden);
+            const willShow = prevHidden;
+            const ok = await showGatoConfirm({
+                title: willShow ? "Mostrar en la app" : "Ocultar en la app",
+                desc: willShow
+                    ? `¿Volver a mostrar <b>${escapeAttr(target.title)}</b> en Gato Play? Aparecerá al instante para todos los usuarios.`
+                    : `¿Ocultar <b>${escapeAttr(target.title)}</b> de Gato Play? Dejará de verse en la app, pero seguirá guardada aquí.`,
+                confirmText: willShow ? "Sí, mostrar" : "Sí, ocultar",
+                isShow: willShow
+            });
+            if (!ok) return;
             target.hidden = !prevHidden;
             target.updatedBy = getGatoAdminName();
             target.updatedAt = new Date().toISOString();
