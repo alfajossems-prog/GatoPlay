@@ -224,7 +224,7 @@
       const upSel = document.getElementById("msUploadServer");
       const actives = SRV_ORDER.filter(k => activeServersMap[k]);
       if (remBox) remBox.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<label class="ms-chip"><input type="checkbox" class="ms-rem-chk" value="${k}" checked style="accent-color:#14748E;"><span class="ms-badge-mini" style="background:${SRV_COLORS[k]};color:${k==='mixdrop'?'#111':'#fff'};">${SRV_SHORT[k]}</span>${SRV_LABELS[k]}</label>`).join("");
-      if (upSel) upSel.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
+      if (upSel) upSel.innerHTML = actives.map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
       msLoadFiles();
     } catch (_) { st.textContent = "Error de conexión"; }
   }
@@ -484,6 +484,7 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
       const t0 = Date.now();
       activeXhr = new XMLHttpRequest();
       activeXhr.open("POST", d.uploadUrl, true);
+        if (d.authHeader) activeXhr.setRequestHeader("Authorization", d.authHeader);
       activeXhr.upload.onprogress = (ev) => {
         if (!ev.lengthComputable) return;
         const pct = Math.round((ev.loaded / ev.total) * 100), sec = Math.max((Date.now() - t0) / 1000, 0.1);
