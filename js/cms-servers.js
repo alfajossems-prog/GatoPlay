@@ -56,7 +56,6 @@
         saveTasks(true);
         renderTray();
         msRenderFiles();
-        loadTasksFromCloud();
     if (msTasks.some(t => t.state === "running" || t.state === "processing")) startPolling();
       }
     } catch (_) {}
@@ -231,6 +230,7 @@
   }
 
   window.msLoadFiles = async function() {
+    loadTasksFromCloud();
     const listEl = document.getElementById("msFilesList");
     listEl.innerHTML = '<div style="padding:18px;text-align:center;color:var(--gt-muted);grid-column:1/-1;">Cargando archivos...</div>';
     try {
@@ -599,6 +599,7 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
   function startPolling() { if (msPollTimer) return; pollRemoteStatuses(); msPollTimer = setInterval(pollRemoteStatuses, 8000); }
 
   function boot() {
+    loadTasksFromCloud();
     applyTheme(localStorage.getItem("gato_theme") || "dark");
     initHeaderMenu();
     renderTray();
