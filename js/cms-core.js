@@ -217,8 +217,11 @@ const STORAGE_KEY = "gatoplay_catalog_db";
 
             try {
                 const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/catalogo.json`;
+            const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(currentDb, null, 2))));
+
+            for (let attempt = 0; attempt < 2; attempt++) {
                 let sha = undefined;
-                const getRes = await fetch(apiUrl, {
+                const getRes = await fetch(`${apiUrl}?t=${Date.now()}`, {
                     headers: { "Authorization": `token ${ghToken}`, "Accept": "application/vnd.github.v3+json" },
                     cache: "no-store"
                 });
@@ -227,7 +230,6 @@ const STORAGE_KEY = "gatoplay_catalog_db";
                     sha = existingFile.sha;
                 }
 
-                const contentBase64 = btoa(unescape(encodeURIComponent(JSON.stringify(currentDb, null, 2))));
                 const putRes = await fetch(apiUrl, {
                     method: "PUT",
                     headers: {
@@ -238,15 +240,20 @@ const STORAGE_KEY = "gatoplay_catalog_db";
                     body: JSON.stringify({
                         message: "Actualizacion desde Gato CMS",
                         content: contentBase64,
-                        sha
+                        ...(sha ? { sha } : {})
                     })
                 });
-                if (!putRes.ok) {
+
+                if (putRes.ok) return true;
+                if (putRes.status === 409 && attempt === 0) {
+                    await new Promise(r => setTimeout(r, 300));
+                    continue;
+                }
                 const errTxt = await putRes.text().catch(() => "");
                 alert("Error guardando en GitHub (HTTP " + putRes.status + "): " + errTxt.slice(0, 140));
                 return false;
             }
-            return true;
+            return false;
             } catch (e) {
                 return false;
             }
