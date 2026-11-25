@@ -12,6 +12,156 @@
   <meta name="theme-color" content="#0A0B0E">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/gpp-192.png?v=1795521762">
   <link rel="apple-touch-icon" href="icons/gpp-192.png?v=1795521762">
+
+  <style id="gato-ui-ux-v2">
+    .saved-item-row {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 12px !important;
+      padding: 14px !important;
+      background: #121418 !important;
+      border: 1px solid #232730 !important;
+      border-radius: 14px !important;
+      margin-bottom: 12px !important;
+      transition: border-color .2s, opacity .2s;
+    }
+    .saved-item-row.is-hidden-item {
+      border-color: rgba(245, 158, 11, 0.45) !important;
+      background: #141312 !important;
+    }
+    .saved-item-row.is-hidden-item .saved-item-thumb {
+      opacity: 0.45;
+      filter: grayscale(40%);
+    }
+    .saved-item-left {
+      display: flex !important;
+      align-items: flex-start !important;
+      gap: 12px !important;
+      width: 100% !important;
+    }
+    .saved-item-thumb {
+      width: 58px !important;
+      height: 86px !important;
+      border-radius: 9px !important;
+      object-fit: cover !important;
+      flex-shrink: 0 !important;
+      background: #1B1F27;
+    }
+    .ep-meta {
+      flex: 1 !important;
+      min-width: 0 !important;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .gato-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .ep-meta h4 {
+      font-size: 15px !important;
+      font-weight: 700 !important;
+      line-height: 1.25 !important;
+      margin: 0 !important;
+      color: #E8ECF2 !important;
+    }
+    .gato-status-pill {
+      flex-shrink: 0;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .gato-status-vis {
+      background: rgba(16, 185, 129, 0.14);
+      color: #6EE7B7;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .gato-status-hid {
+      background: rgba(245, 158, 11, 0.14);
+      color: #FCD34D;
+      border: 1px solid rgba(245, 158, 11, 0.38);
+    }
+    .gato-audit-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      font-size: 11.5px;
+      color: #94A3B8;
+    }
+    .gato-audit-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .gato-user-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 1px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .gato-user-gp { background: rgba(20, 116, 142, 0.22); color: #67D4F1; }
+    .gato-user-ma { background: rgba(99, 102, 241, 0.22); color: #A5B4FC; }
+    .saved-item-row .action-pair {
+      display: grid !important;
+      grid-template-columns: 1fr 1.25fr !important;
+      gap: 8px !important;
+      width: 100% !important;
+      padding-top: 10px !important;
+      border-top: 1px solid #232730 !important;
+    }
+    .btn-card-act {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      height: 38px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid #232730;
+      transition: .15s;
+    }
+    .btn-card-edit {
+      background: rgba(14, 90, 111, 0.22);
+      border-color: rgba(20, 116, 142, 0.5);
+      color: #67D4F1;
+    }
+    .btn-card-hide {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #FCD34D;
+    }
+    .btn-card-show {
+      background: rgba(16, 185, 129, 0.16);
+      border-color: rgba(16, 185, 129, 0.45);
+      color: #6EE7B7;
+    }
+    .ms-user-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(20, 116, 142, 0.22);
+      color: #67D4F1;
+      border: 1px solid rgba(20, 116, 142, 0.35);
+    }
+  </style>
+
 </head>
 <body style="padding-top: 66px;">
 
@@ -526,8 +676,8 @@
     </div>
   </div>
 </div>
-<script src="js/cms-core.js?v=1795584651"></script>
-<script src="js/cms-servers.js?v=1795616904"></script>
+<script src="js/cms-core.js?v=1795635802"></script>
+<script src="js/cms-servers.js?v=1795635802"></script>
 
 
 <!-- === MÓDULO DE AUTO-ACTUALIZACIÓN GATO PLAY === -->
@@ -654,6 +804,6 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(() => {}));
 }
 </script>
-  <script src="js/cms-audit.js?v=1795633100"></script>
+  <script src="js/cms-audit.js?v=1795635802"></script>
 </body>
 </html>

@@ -1,3 +1,31 @@
+
+window.__gatoUploaderMap = window.__gatoUploaderMap || {};
+(function loadUploaderMap() {
+  const pass = localStorage.getItem("gato_admin_pass") || localStorage.getItem("gato_worker_pass") || "";
+  if (!pass) return;
+  fetch("https://gato-uploader.josseanm.workers.dev/admin/stats?range=year", {
+    headers: { "X-Admin-Pass": pass }
+  }).then(r => r.json()).then(d => {
+    if (!d || !Array.isArray(d.audit_logs)) return;
+    d.audit_logs.forEach(log => {
+      if (log.action === "upload_file" || log.action === "remote_upload") {
+        const k = String(log.target_name || "").toLowerCase().trim();
+        if (k && !window.__gatoUploaderMap[k]) window.__gatoUploaderMap[k] = log.admin_name;
+      }
+    });
+  }).catch(() => {});
+})();
+function getFileUploaderBadge(title) {
+  const t = String(title || "").toLowerCase().trim();
+  let adm = window.__gatoUploaderMap[t] || "";
+  if (!adm) {
+    for (const [k, v] of Object.entries(window.__gatoUploaderMap)) {
+      if (k.length > 4 && (t.includes(k) || k.includes(t))) { adm = v; break; }
+    }
+  }
+  return adm ? `<span class="ms-user-tag">👤 ${adm}</span>` : "";
+}
+
 // === GATO CMS: TEMA + MENÚ MINIMALISTA + SERVERS ===
 (function() {
   const SVG_SUN = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>';
@@ -299,6 +327,7 @@
             <div class="ms-card-meta">
               ${pub ? '<span class="ms-tag ms-tag-ok">En Catálogo</span>' : '<span class="ms-tag ms-tag-new">Sin publicar</span>'}
               ${sizeTxt ? '<span>' + sizeTxt + '</span>' : ''}
+              ${getFileUploaderBadge(g.displayTitle)}
               ${lowSize ? '<span class="ms-tag ms-tag-warn">Archivo pequeño</span>' : ''}
             </div>
           </div>

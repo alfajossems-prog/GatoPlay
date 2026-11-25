@@ -1,3 +1,34 @@
+
+// --- GATO PRO METADATA & VISIBILITY HELPERS ---
+window.__gatoItemHashes = window.__gatoItemHashes || {};
+function getGatoAdminName() {
+  return localStorage.getItem("gato_admin_name") || "GatoPlay";
+}
+(function syncGatoAdminName() {
+  const p = localStorage.getItem("gato_admin_pass") || localStorage.getItem("gato_worker_pass") || "";
+  if (!p) return;
+  fetch("https://gato-uploader.josseanm.workers.dev/admin/whoami", {
+    headers: { "X-Admin-Pass": p }
+  }).then(r => r.json()).then(d => {
+    if (d && d.ok && d.admin) localStorage.setItem("gato_admin_name", d.admin);
+  }).catch(() => {});
+})();
+function formatGatoDate(iso) {
+  if (!iso) return "Sin registro";
+  try {
+    return new Date(iso).toLocaleString("es-MX", {
+      day: "2-digit", month: "short", year: "2-digit", hour: "2-digit", minute: "2-digit"
+    });
+  } catch { return String(iso).slice(0, 16); }
+}
+function renderAdminBadge(name) {
+  const n = name || "GatoPlay";
+  const cls = n.toLowerCase().includes("mauricio") ? "gato-user-ma" : "gato-user-gp";
+  return `<span class="gato-user-badge ${cls}">👤 ${n}</span>`;
+}
+const SVG_EYE_OFF = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+const SVG_EYE_ON = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+
 if (!localStorage.getItem("gh_repo") || localStorage.getItem("gh_repo") === "GatoPlay") { localStorage.setItem("gh_repo", "gatoplay-db"); }
 /* Lógica principal de Gato CMS */
 
@@ -195,6 +226,25 @@ const STORAGE_KEY = "gatoplay_catalog_db";
 
         // SINCRONIZACIÓN DIRECTA CON GITHUB API (SI TIENE TOKEN) + SERVIDOR NODE LOCAL
         async function pushDatabaseToCloudAndServer() {
+    try {
+      const adm = getGatoAdminName();
+      const nowIso = new Date().toISOString();
+      (currentDb.items || []).forEach(it => {
+        const key = String(it.id || it.title);
+        const clone = Object.assign({}, it);
+        delete clone.updatedAt; delete clone.updatedBy;
+        const h = JSON.stringify(clone);
+        if (!window.__gatoItemHashes[key]) {
+          if (!it.createdBy) it.createdBy = adm;
+          if (!it.updatedAt) { it.updatedAt = nowIso; it.updatedBy = adm; }
+          window.__gatoItemHashes[key] = h;
+        } else if (window.__gatoItemHashes[key] !== h) {
+          it.updatedAt = nowIso;
+          it.updatedBy = adm;
+          window.__gatoItemHashes[key] = h;
+        }
+      });
+    } catch (_) {}
             syncLocalCache();
 
             // 1. Intentar guardar en el servidor Node local si está activo
@@ -831,37 +881,61 @@ const STORAGE_KEY = "gatoplay_catalog_db";
                 return;
             }
 
-            box.innerHTML = filtered.map(item => {
+                        box.innerHTML = filtered.map(item => {
                 const linksCount = item.type === "series"
                     ? `${(item.seasons || []).length} temp.`
                     : `${(item.servers || []).length} enlaces`;
+                const isHidden = Boolean(item.hidden);
+                const createdBy = item.createdBy || "GatoPlay";
+                const updatedBy = item.updatedBy || createdBy;
+                const updatedAt = formatGatoDate(item.updatedAt);
+                const key = String(item.id || item.title);
+                if (!window.__gatoItemHashes[key]) {
+                  const clone = Object.assign({}, item);
+                  delete clone.updatedAt; delete clone.updatedBy;
+                  window.__gatoItemHashes[key] = JSON.stringify(clone);
+                }
                 return `
-                    <div class="saved-item-row">
+                    <div class="saved-item-row ${isHidden ? 'is-hidden-item' : ''}">
                         <div class="saved-item-left">
                             <img src="${escapeAttr(item.poster || '')}" class="saved-item-thumb" alt="" loading="lazy">
                             <div class="ep-meta">
-                                <h4>${escapeAttr(item.title)}</h4>
-                                <p>${escapeAttr(item.year || '2026')} • ${linksCount}</p>
+                                <div class="gato-card-head">
+                                    <h4>${escapeAttr(item.title)}</h4>
+                                    <span class="gato-status-pill ${isHidden ? 'gato-status-hid' : 'gato-status-vis'}">${isHidden ? '● Oculta' : '● Visible'}</span>
+                                </div>
+                                <p style="margin:0;font-size:12px;color:#94A3B8;">${escapeAttr(item.year || '2026')} • ${linksCount}</p>
+                                <div class="gato-audit-grid">
+                                    <div class="gato-audit-line"><span>Subida por:</span> ${renderAdminBadge(createdBy)}</div>
+                                    <div class="gato-audit-line"><span>Última act:</span> <b>${updatedAt}</b> ${renderAdminBadge(updatedBy)}</div>
+                                </div>
                             </div>
                         </div>
                         <div class="action-pair">
-                            <button type="button" class="btn-icon-sq edit" title="Editar" onclick="editCatalogItem('${escapeAttr(item.id)}')">${SVG_EDIT}</button>
-                            <button type="button" class="btn-icon-sq del" title="Eliminar" onclick="deleteCatalogItem('${escapeAttr(item.id)}')">${SVG_TRASH}</button>
+                            <button type="button" class="btn-card-act btn-card-edit" onclick="editCatalogItem('${escapeAttr(item.id)}')">${SVG_EDIT} Editar</button>
+                            <button type="button" class="btn-card-act ${isHidden ? 'btn-card-show' : 'btn-card-hide'}" onclick="toggleHideCatalogItem('${escapeAttr(item.id)}')">
+                                ${isHidden ? SVG_EYE_ON + ' Mostrar en App' : SVG_EYE_OFF + ' Ocultar en App'}
+                            </button>
                         </div>
                     </div>
                 `;
             }).join("");
         }
 
-        async function deleteCatalogItem(id) {
-            if (!confirm("¿Eliminar este título del catálogo?")) return;
-            const prevItems = [...(currentDb.items || [])];
-    currentDb.items = prevItems.filter(i => String(i.id) !== String(id));
-
-    const saved = await pushDatabaseToCloudAndServer();
-    if (!saved) {
-        currentDb.items = prevItems;
-        renderAdminList();
+        async function toggleHideCatalogItem(id) {
+            const target = (currentDb.items || []).find(i => String(i.id) === String(id));
+            if (!target) return;
+            const prevHidden = Boolean(target.hidden);
+            target.hidden = !prevHidden;
+            target.updatedBy = getGatoAdminName();
+            target.updatedAt = new Date().toISOString();
+            const saved = await pushDatabaseToCloudAndServer();
+            if (!saved) {
+                target.hidden = prevHidden;
+            }
+            renderAdminList();
+        }
+        window.deleteCatalogItem = toggleHideCatalogItem;
         return;
     }
     renderAdminList();
