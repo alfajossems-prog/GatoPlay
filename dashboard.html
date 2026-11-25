@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Gato Play — Panel Pro</title>
+  <style>
+    :root {
+      --bg: #0A0B0E;
+      --card: #121418;
+      --card-2: #171A21;
+      --border: #232730;
+      --accent: #0E5A6F;
+      --accent-2: #14748E;
+      --text: #E8ECF2;
+      --muted: #8B95A5;
+      --ok: #10B981;
+      --warn: #F59E0B;
+      --err: #EF4444;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.45;
+      min-height: 100vh;
+      padding-bottom: 48px;
+    }
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10, 11, 14, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 10px var(--accent-2); }
+    .brand h1 { font-size: 16px; font-weight: 700; letter-spacing: .3px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: rgba(20, 116, 142, 0.16); color: #67D4F1; border: 1px solid rgba(20, 116, 142, 0.35);
+    }
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .btn {
+      background: var(--card-2); color: var(--text); border: 1px solid var(--border);
+      padding: 8px 13px; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+      transition: .15s;
+    }
+    .btn:hover { border-color: var(--accent-2); }
+    .btn-primary { background: var(--accent); border-color: var(--accent-2); color: #fff; }
+    .btn-primary:hover { background: var(--accent-2); }
+    .btn-danger { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #FCA5A5; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .container { max-width: 1260px; margin: 0 auto; padding: 18px; display: flex; flex-direction: column; gap: 18px; }
+
+    .range-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; background: var(--card); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
+    .pill {
+      background: transparent; color: var(--muted); border: none; padding: 6px 12px;
+      border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .pill.active { background: var(--accent); color: #fff; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+    .kpi {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .kpi-label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+    .kpi-val { font-size: 28px; font-weight: 800; letter-spacing: -.5px; }
+    .kpi-sub { font-size: 12px; color: var(--muted); }
+    .up { color: var(--ok); font-weight: 700; }
+    .down { color: var(--err); font-weight: 700; }
+
+    .grid-2 { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; }
+    @media (max-width: 960px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .card-title { font-size: 15px; font-weight: 700; }
+    .muted { color: var(--muted); font-size: 12px; }
+
+    /* Mini tabla de periodos */
+    .period-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    @media (max-width: 640px) { .period-grid { grid-template-columns: repeat(2, 1fr); } }
+    .period-box {
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 9px; padding: 10px; text-align: center;
+    }
+    .period-box .p-lbl { font-size: 11px; color: var(--muted); }
+    .period-box .p-num { font-size: 18px; font-weight: 800; margin-top: 2px; }
+    .period-box .p-sub { font-size: 11px; color: #67D4F1; }
+
+    /* Gráfica 7 días */
+    .chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 22px; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+    .bar-val { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .bar {
+      width: 100%; max-width: 44px; min-height: 4px; border-radius: 6px 6px 2px 2px;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      transition: height .3s ease;
+    }
+    .bar-day { font-size: 11px; color: var(--muted); }
+
+    /* Top 10 */
+    .top-list { display: flex; flex-direction: column; gap: 10px; }
+    .top-item {
+      display: flex; align-items: center; gap: 12px; padding: 8px;
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 10px;
+    }
+    .top-rank { width: 24px; text-align: center; font-weight: 800; color: #67D4F1; font-size: 14px; }
+    .top-poster { width: 38px; height: 54px; border-radius: 6px; object-fit: cover; background: #1E222B; flex-shrink: 0; }
+    .top-info { flex: 1; min-width: 0; }
+    .top-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .prog-track { height: 5px; background: #232730; border-radius: 99px; margin-top: 6px; overflow: hidden; }
+    .prog-fill { height: 100%; background: var(--accent-2); border-radius: 99px; }
+    .top-views { font-size: 13px; font-weight: 800; white-space: nowrap; }
+
+    /* Auditoría */
+    .admin-compare { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    @media (max-width: 540px) { .admin-compare { grid-template-columns: 1fr; } }
+    .admin-box {
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-wrap { overflow-x: auto; max-height: 340px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { padding: 9px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--card-2); color: var(--muted); font-weight: 700; position: sticky; top: 0; }
+    .srv-tag {
+      display: inline-block; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      background: #1F2937; color: #93C5FD;
+    }
+    .srv-pixeldrain { background: rgba(16, 185, 129, 0.16); color: #6EE7B7; }
+    .srv-voe { background: rgba(245, 158, 11, 0.16); color: #FCD34D; }
+    .srv-streamtape { background: rgba(59, 130, 246, 0.18); color: #93C5FD; }
+    .srv-mixdrop { background: rgba(239, 68, 68, 0.16); color: #FCA5A5; }
+
+    /* Formularios Config Remota */
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    @media (max-width: 720px) { .form-grid { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .input, select {
+      background: var(--bg); color: var(--text); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 11px; font-size: 13px; width: 100%;
+    }
+    .input:focus { outline: none; border-color: var(--accent-2); }
+    .switch-row {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    }
+
+    /* Login Overlay */
+    .overlay {
+      position: fixed; inset: 0; z-index: 100; background: rgba(10, 11, 14, 0.96);
+      display: flex; align-items: center; justify-content: center; padding: 18px;
+    }
+    .login-card {
+      width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 24px; display: flex; flex-direction: column; gap: 14px;
+    }
+    .hidden { display: none !important; }
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; z-index: 120;
+      background: var(--card-2); border: 1px solid var(--accent-2); color: var(--text);
+      padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+      box-shadow: 0 10px 25px rgba(0,0,0,.5);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginOverlay" class="overlay">
+    <div class="login-card">
+      <div class="brand"><div class="brand-dot"></div><h1>Gato Play — Panel Pro</h1></div>
+      <p class="muted">Ingresa tu contraseña de administrador (<b>GatoPlay</b> o <b>Mauricio</b>).</p>
+      <div class="field">
+        <label>Contraseña de acceso</label>
+        <input id="passInput" type="password" class="input" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button id="btnLogin" class="btn btn-primary" style="justify-content:center;">Entrar al Panel Pro</button>
+      <p id="loginErr" class="down hidden" style="font-size:12px;"></p>
+    </div>
+  </div>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <h1>Gato Play — Panel Pro</h1>
+      <span id="adminBadge" class="badge">Conectando...</span>
+    </div>
+    <div class="top-actions">
+      <a href="admin.html" class="btn">← Volver a Gato CMS</a>
+      <button id="btnRefresh" class="btn btn-primary">↻ Actualizar</button>
+      <button id="btnLogout" class="btn btn-danger">Salir</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- SELECTOR DE RANGO -->
+    <div class="range-bar">
+      <div>
+        <div style="font-size:14px;font-weight:700;">Resumen en tiempo real</div>
+        <div id="lastUpdate" class="muted">Cargando métricas desde Cloudflare D1...</div>
+      </div>
+      <div class="pills" id="rangePills">
+        <button class="pill active" data-range="today">Hoy</button>
+        <button class="pill" data-range="yesterday">Ayer</button>
+        <button class="pill" data-range="week">7 Días</button>
+        <button class="pill" data-range="month">Este Mes</button>
+        <button class="pill" data-range="year">Este Año</button>
+      </div>
+    </div>
+
+    <!-- KPIS -->
+    <section class="kpi-grid">
+      <div class="kpi">
+        <span class="kpi-label">Dispositivos Totales</span>
+        <span id="kpiTotalDev" class="kpi-val">0</span>
+        <span id="kpiNewToday" class="kpi-sub">+0 nuevos hoy</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Activos Hoy (DAU)</span>
+        <span id="kpiDauToday" class="kpi-val">0</span>
+        <span id="kpiDauDiff" class="kpi-sub">vs 0 ayer</span>
+      </div>
+      <div class="kpi">
+        <span id="kpiViewsLabel" class="kpi-label">Vistas (Hoy)</span>
+        <span id="kpiViewsVal" class="kpi-val">0</span>
+        <span id="kpiViewsSub" class="kpi-sub">Reproducciones >2 min</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Reportes Pendientes</span>
+        <span id="kpiReports" class="kpi-val">0</span>
+        <span class="kpi-sub">Enviados desde la app</span>
+      </div>
+    </section>
+
+    <!-- DESGLOSE POR PERIODO -->
+    <section class="card">
+      <div class="card-head">
+        <div class="card-title">Actividad por Periodo (Usuarios Activos / Reproducciones)</div>
+      </div>
+      <div class="period-grid" id="periodGrid"></div>
+    </section>
+
+    <!-- GRÁFICA + TOP 10 -->
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">Tendencia de Reproducciones (Últimos 7 días)</div>
+        </div>
+        <div id="trendChart" class="chart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title" id="topTitleHeader">Top 10 Más Vistos (Hoy)</div>
+        </div>
+        <div id="topList" class="top-list">
+          <p class="muted">Sin reproducciones registradas en este periodo.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUDITORÍA DE EQUIPO -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Auditoría de Equipo (GatoPlay vs Mauricio)</div>
+          <div class="muted">Registro automático de títulos agregados y archivos subidos a servidores</div>
+        </div>
+        <div class="pills" id="auditFilterPills">
+          <button class="pill active" data-admin="ALL">Todos</button>
+          <button class="pill" data-admin="GatoPlay">GatoPlay</button>
+          <button class="pill" data-admin="Mauricio">Mauricio</button>
+        </div>
+      </div>
+
+      <div class="admin-compare" id="adminCompare"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Admin</th>
+              <th>Acción</th>
+              <th>Título / Archivo</th>
+              <th>Servidor</th>
+              <th>Peso</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody id="auditBody">
+            <tr><td colspan="6" class="muted">Sin movimientos registrados aún.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- HERRAMIENTAS PREMIUM: CONFIG REMOTA + BANDEJA DE REPORTES -->
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Control Remoto de la App</div>
+            <div class="muted">Force Update, Banner Global y Modo Mantenimiento sin recompilar</div>
+          </div>
+          <button id="btnSaveConfig" class="btn btn-primary btn-sm">Guardar Cambios</button>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label>Versión mínima APK (ej. 1.2.0)</label>
+            <input id="cfgMinVersion" class="input" placeholder="1.0.0" />
+          </div>
+          <div class="field">
+            <label>URL de descarga del APK nuevo</label>
+            <input id="cfgApkUrl" class="input" placeholder="https://..." />
+          </div>
+          <div class="switch-row">
+            <span style="font-size:13px;font-weight:600;">Actualización obligatoria</span>
+            <input id="cfgForceUpdate" type="checkbox" />
+          </div>
+          <div class="switch-row">
+            <span style="font-size:13px;font-weight:600;">Modo Mantenimiento</span>
+            <input id="cfgMaintenance" type="checkbox" />
+          </div>
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Banner / Aviso Global en inicio (vacío = oculto)</label>
+            <input id="cfgBanner" class="input" placeholder="Ej. ¡Nuevos estrenos disponibles hoy!" />
+          </div>
+          <div class="field" style="grid-column:1 / -1;">
+            <label>Mensaje de Mantenimiento</label>
+            <input id="cfgMaintMsg" class="input" placeholder="Estamos mejorando Gato Play. Volvemos en unos minutos." />
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">Bandeja de Reportes</div>
+            <div class="muted">Títulos reportados por usuarios desde Gato Play</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Motivo</th>
+                <th>Fecha</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="reportsBody">
+              <tr><td colspan="4" class="muted">No hay reportes pendientes.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MONITOR DE SALUD DE ENLACES -->
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Monitor de Salud de Enlaces</div>
+          <div class="muted">Escanea tu catálogo en vivo y detecta enlaces caídos (404 / timeout)</div>
+        </div>
+        <button id="btnScanLinks" class="btn btn-primary btn-sm">Escanear Catálogo</button>
+      </div>
+      <div id="scanStatus" class="muted">Pulsa "Escanear Catálogo" para verificar Pixeldrain, VOE, Streamtape y Mixdrop.</div>
+      <div class="table-wrap hidden" id="scanTableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Título</th>
+              <th>URL</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="scanBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script>
+    const WORKER = "https://gato-uploader.josseanm.workers.dev";
+    let adminPass = localStorage.getItem("gato_admin_pass") || localStorage.getItem("gato_worker_pass") || "";
+    let currentRange = "today";
+    let currentAdminFilter = "ALL";
+    let cachedAuditLogs = [];
+
+    const $ = (id) => document.getElementById(id);
+    const rangeLabels = { today: "Hoy", yesterday: "Ayer", week: "7 Días", month: "Este Mes", year: "Este Año" };
+
+    function showToast(msg) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.remove("hidden");
+      clearTimeout(window.__tTimer);
+      window.__tTimer = setTimeout(() => t.classList.add("hidden"), 3000);
+    }
+
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ "X-Admin-Pass": adminPass, "Content-Type": "application/json" }, opts.headers || {});
+      const r = await fetch(WORKER + path, { ...opts, headers });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401) throw new Error("UNAUTHORIZED");
+      if (!r.ok || data.ok === false) throw new Error(data.error || "Error " + r.status);
+      return data;
+    }
+
+    async function tryLogin(pass) {
+      adminPass = String(pass || "").trim();
+      if (!adminPass) return false;
+      try {
+        const res = await api("/admin/whoami");
+        localStorage.setItem("gato_admin_pass", adminPass);
+        $("adminBadge").textContent = "Admin: " + res.admin;
+        $("loginOverlay").classList.add("hidden");
+        await loadStats();
+        return true;
+      } catch (e) {
+        $("loginErr").textContent = "Contraseña incorrecta.";
+        $("loginErr").classList.remove("hidden");
+        return false;
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const d = await api("/admin/stats?range=" + encodeURIComponent(currentRange));
+        $("adminBadge").textContent = "Admin: " + d.admin;
+        $("lastUpdate").textContent = "Actualizado: " + new Date().toLocaleTimeString();
+
+        // KPIs
+        $("kpiTotalDev").textContent = d.devices.total.toLocaleString();
+        $("kpiNewToday").textContent = `+${d.devices.new_today} nuevos hoy`;
+        $("kpiDauToday").textContent = d.devices.dau_today.toLocaleString();
+
+        const diff = d.devices.dau_today - d.devices.dau_yesterday;
+        const pct = d.devices.dau_yesterday > 0 ? Math.round((diff / d.devices.dau_yesterday) * 100) : (d.devices.dau_today > 0 ? 100 : 0);
+        $("kpiDauDiff").innerHTML = `<span class="${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '↑' : '↓'} ${Math.abs(pct)}%</span> vs ${d.devices.dau_yesterday} ayer`;
+
+        const vMap = { today: d.views.today, yesterday: d.views.yesterday, week: d.views.week, month: d.views.month, year: d.views.year };
+        $("kpiViewsLabel").textContent = `Vistas (${rangeLabels[currentRange]})`;
+        $("kpiViewsVal").textContent = (vMap[currentRange] || 0).toLocaleString();
+        $("kpiReports").textContent = d.reports.length;
+
+        // Desglose por periodo
+        const periods = [
+          { lbl: "Hoy", dau: d.devices.dau_today, v: d.views.today },
+          { lbl: "Ayer", dau: d.devices.dau_yesterday, v: d.views.yesterday },
+          { lbl: "7 Días", dau: d.devices.dau_week, v: d.views.week },
+          { lbl: "Este Mes", dau: d.devices.dau_month, v: d.views.month },
+          { lbl: "Este Año", dau: d.devices.dau_year, v: d.views.year }
+        ];
+        $("periodGrid").innerHTML = periods.map(p => `
+          <div class="period-box">
+            <div class="p-lbl">${p.lbl}</div>
+            <div class="p-num">${p.dau.toLocaleString()}</div>
+            <div class="p-sub">${p.v.toLocaleString()} vistas</div>
+          </div>
+        `).join("");
+
+        // Gráfica 7 días
+        const trend = d.trend_7d || [];
+        const maxV = Math.max(1, ...trend.map(x => x.total));
+        $("trendChart").innerHTML = trend.length ? trend.map(x => {
+          const h = Math.max(6, Math.round((x.total / maxV) * 100));
+          return `<div class="bar-col">
+            <div class="bar-val">${x.total}</div>
+            <div class="bar" style="height:${h}%"></div>
+            <div class="bar-day">${x.day.slice(5)}</div>
+          </div>`;
+        }).join("") : `<p class="muted" style="margin:auto;">Sin datos de reproducciones en los últimos 7 días.</p>`;
+
+        // Top 10
+        $("topTitleHeader").textContent = `Top 10 Más Vistos (${rangeLabels[currentRange]})`;
+        const tops = d.top_titles || [];
+        const maxTop = Math.max(1, ...tops.map(x => x.total));
+        $("topList").innerHTML = tops.length ? tops.map((t, i) => `
+          <div class="top-item">
+            <div class="top-rank">#${i + 1}</div>
+            <img class="top-poster" src="${t.poster || ''}" onerror="this.style.visibility='hidden'" />
+            <div class="top-info">
+              <div class="top-name">${escapeHtml(t.title)}</div>
+              <div class="muted">${t.type === 'series' ? 'Serie' : 'Película'}</div>
+              <div class="prog-track"><div class="prog-fill" style="width:${Math.round((t.total / maxTop) * 100)}%"></div></div>
+            </div>
+            <div class="top-views">${t.total}</div>
+          </div>
+        `).join("") : `<p class="muted">Sin reproducciones registradas en este periodo.</p>`;
+
+        // Auditoría comparativa
+        const sum = { GatoPlay: { titles: 0, files: 0 }, Mauricio: { titles: 0, files: 0 } };
+        (d.audit_summary || []).forEach(r => {
+          if (!sum[r.admin_name]) sum[r.admin_name] = { titles: 0, files: 0 };
+          if (r.action === "upload_file" || r.action === "remote_upload") sum[r.admin_name].files += r.total;
+          else sum[r.admin_name].titles += r.total;
+        });
+        $("adminCompare").innerHTML = Object.entries(sum).map(([name, s]) => `
+          <div class="admin-box">
+            <div>
+              <div style="font-weight:700;font-size:14px;">${name}</div>
+              <div class="muted">Actividad acumulada</div>
+            </div>
+            <div style="text-align:right;font-size:12.5px;">
+              <div><b>${s.titles}</b> títulos</div>
+              <div style="color:#67D4F1;"><b>${s.files}</b> archivos</div>
+            </div>
+          </div>
+        `).join("");
+
+        cachedAuditLogs = d.audit_logs || [];
+        renderAuditTable();
+
+        // Reportes
+        const reps = d.reports || [];
+        $("reportsBody").innerHTML = reps.length ? reps.map(r => `
+          <tr>
+            <td><b>${escapeHtml(r.title)}</b></td>
+            <td>${escapeHtml(r.reason || 'Sin detalle')}</td>
+            <td class="muted">${formatDate(r.created_at)}</td>
+            <td><button class="btn btn-sm btn-primary" onclick="resolveReport(${r.id})">✓ Resolver</button></td>
+          </tr>
+        `).join("") : `<tr><td colspan="4" class="muted">No hay reportes pendientes.</td></tr>`;
+
+        // Config remota
+        const c = d.app_config || {};
+        $("cfgMinVersion").value = c.min_version || "";
+        $("cfgApkUrl").value = c.latest_apk_url || "";
+        $("cfgForceUpdate").checked = c.force_update === "true";
+        $("cfgMaintenance").checked = c.maintenance_mode === "true";
+        $("cfgBanner").value = c.banner_text || "";
+        $("cfgMaintMsg").value = c.maintenance_msg || "";
+
+      } catch (e) {
+        if (e.message === "UNAUTHORIZED") {
+          $("loginOverlay").classList.remove("hidden");
+        } else {
+          showToast("Error cargando datos: " + e.message);
+        }
+      }
+    }
+
+    function renderAuditTable() {
+      const list = currentAdminFilter === "ALL"
+        ? cachedAuditLogs
+        : cachedAuditLogs.filter(x => x.admin_name === currentAdminFilter);
+
+      $("auditBody").innerHTML = list.length ? list.map(a => {
+        const srv = (a.server || "").toLowerCase();
+        const actLabel = a.action === "add_title" ? "Título agregado"
+          : a.action === "edit_title" ? "Título editado"
+          : a.action === "upload_file" ? "Archivo subido"
+          : a.action === "remote_upload" ? "Carga remota" : a.action;
+        return `<tr>
+          <td><b>${escapeHtml(a.admin_name)}</b></td>
+          <td>${actLabel}</td>
+          <td>${escapeHtml(a.target_name)}</td>
+          <td>${srv ? `<span class="srv-tag srv-${srv}">${srv}</span>` : '—'}</td>
+          <td class="muted">${escapeHtml(a.size_info || '—')}</td>
+          <td class="muted">${formatDate(a.created_at)}</td>
+        </tr>`;
+      }).join("") : `<tr><td colspan="6" class="muted">Sin registros para este filtro.</td></tr>`;
+    }
+
+    window.resolveReport = async (id) => {
+      try {
+        await api("/admin/report-resolve", { method: "POST", body: JSON.stringify({ id }) });
+        showToast("Reporte marcado como resuelto");
+        loadStats();
+      } catch (e) { showToast("Error: " + e.message); }
+    };
+
+    $("btnSaveConfig").onclick = async () => {
+      try {
+        await api("/admin/config", {
+          method: "POST",
+          body: JSON.stringify({
+            min_version: $("cfgMinVersion").value.trim(),
+            latest_apk_url: $("cfgApkUrl").value.trim(),
+            force_update: String($("cfgForceUpdate").checked),
+            maintenance_mode: String($("cfgMaintenance").checked),
+            banner_text: $("cfgBanner").value.trim(),
+            maintenance_msg: $("cfgMaintMsg").value.trim()
+          })
+        });
+        showToast("Configuración remota guardada");
+      } catch (e) { showToast("Error: " + e.message); }
+    };
+
+    $("btnScanLinks").onclick = async () => {
+      const btn = $("btnScanLinks");
+      btn.disabled = true;
+      $("scanStatus").textContent = "Descargando catálogo y verificando enlaces...";
+      $("scanTableWrap").classList.remove("hidden");
+      $("scanBody").innerHTML = "";
+      try {
+        const catRes = await fetch(WORKER + "/catalogo", { headers: { "X-Gato-Client": "GP-APP-9482716350492-PRO" } });
+        const cat = await catRes.json();
+        const items = Array.isArray(cat) ? cat : (cat.items || cat.movies || []);
+        const pairs = [];
+        items.forEach(it => {
+          const title = it.title || it.name || "Sin título";
+          const srvs = it.servers || it.links || [];
+          srvs.forEach(s => {
+            const u = typeof s === "string" ? s : (s?.url || s?.link || "");
+            if (u && u.startsWith("http")) pairs.push({ title, url: u });
+          });
+        });
+
+        let broken = 0;
+        for (let i = 0; i < pairs.length; i += 10) {
+          const slice = pairs.slice(i, i + 10);
+          $("scanStatus").textContent = `Escaneando ${Math.min(i + 10, pairs.length)} de ${pairs.length} enlaces...`;
+          const res = await api("/admin/check-links", { method: "POST", body: JSON.stringify({ urls: slice.map(x => x.url) }) });
+          res.results.forEach((r, idx) => {
+            if (!r.ok) {
+              broken++;
+              const row = document.createElement("tr");
+              row.innerHTML = `<td><b>${escapeHtml(slice[idx].title)}</b></td>
+                <td style="word-break:break-all;font-size:11.5px;">${escapeHtml(r.url)}</td>
+                <td><span class="down">CAÍDO (${r.status || 'Timeout'})</span></td>`;
+              $("scanBody").appendChild(row);
+            }
+          });
+        }
+        $("scanStatus").innerHTML = broken === 0
+          ? `<span class="up">✓ Escaneo completo (${pairs.length} enlaces revisados). Todo saludable.</span>`
+          : `<span class="down">Escaneo completo: se detectaron ${broken} enlaces caídos de ${pairs.length}.</span>`;
+      } catch (e) {
+        $("scanStatus").textContent = "Error al escanear: " + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    };
+
+    function escapeHtml(s) {
+      return String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+    }
+    function formatDate(iso) {
+      if (!iso) return "—";
+      try { return new Date(iso).toLocaleString("es-MX", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
+      catch { return iso.slice(0, 16); }
+    }
+
+    // Eventos UI
+    $("btnLogin").onclick = () => tryLogin($("passInput").value);
+    $("passInput").addEventListener("keydown", e => { if (e.key === "Enter") tryLogin($("passInput").value); });
+    $("btnRefresh").onclick = loadStats;
+    $("btnLogout").onclick = () => {
+      localStorage.removeItem("gato_admin_pass");
+      adminPass = "";
+      $("loginOverlay").classList.remove("hidden");
+    };
+
+    $("rangePills").onclick = (e) => {
+      const btn = e.target.closest(".pill");
+      if (!btn) return;
+      document.querySelectorAll("#rangePills .pill").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      currentRange = btn.dataset.range;
+      loadStats();
+    };
+
+    $("auditFilterPills").onclick = (e) => {
+      const btn = e.target.closest(".pill");
+      if (!btn) return;
+      document.querySelectorAll("#auditFilterPills .pill").forEach(p => p.classList.remove("active"));
+      btn.classList.add("active");
+      currentAdminFilter = btn.dataset.admin;
+      renderAuditTable();
+    };
+
+    // Auto-inicio si ya hay sesión
+    if (adminPass) tryLogin(adminPass);
+  </script>
+</body>
+</html>
