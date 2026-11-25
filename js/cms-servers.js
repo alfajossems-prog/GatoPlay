@@ -456,18 +456,52 @@ let uploadSeq = 0;
 
 function msEnsureUploadUI() {
   const fileEl = document.getElementById("msUploadFile");
+  const nameEl = document.getElementById("msUploadName");
   if (!fileEl || fileEl.dataset.minimalReady) return;
   fileEl.dataset.minimalReady = "1";
   fileEl.removeAttribute("accept");
   fileEl.style.display = "none";
 
+  if (nameEl) {
+    nameEl.style.display = "none";
+    nameEl.addEventListener("input", () => {
+      const lbl = document.getElementById("msPickLabel");
+      if (lbl && nameEl.value.trim()) lbl.textContent = nameEl.value.trim();
+    });
+  }
+
+  const row = document.createElement("div");
+  row.id = "msPickRow";
+  row.style.cssText = "display:flex;align-items:stretch;gap:8px;width:100%;";
+
   const picker = document.createElement("button");
   picker.type = "button";
   picker.id = "msPickFileBtn";
-  picker.style.cssText = "width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;border:1px dashed rgba(255,255,255,0.22);background:rgba(255,255,255,0.03);color:#e2e8f0;font-size:13px;cursor:pointer;text-align:left;";
+  picker.style.cssText = "flex:1;min-width:0;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;border:1px dashed rgba(255,255,255,0.22);background:rgba(255,255,255,0.03);color:#e2e8f0;font-size:13px;cursor:pointer;text-align:left;";
   picker.innerHTML = '<span id="msPickLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85;">+ Seleccionar video...</span><span id="msPickSize" style="font-size:11px;opacity:.6;flex-shrink:0;">MP4 / MKV</span>';
   picker.onclick = () => fileEl.click();
-  fileEl.parentNode.insertBefore(picker, fileEl);
+
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.id = "msEditNameBtn";
+  editBtn.title = "Editar nombre del archivo";
+  editBtn.style.cssText = "display:none;align-items:center;justify-content:center;width:44px;flex-shrink:0;border-radius:10px;border:1px solid rgba(255,255,255,0.16);background:rgba(255,255,255,0.05);color:#cbd5e1;cursor:pointer;transition:all .15s;";
+  editBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>';
+  editBtn.onclick = () => {
+    if (!nameEl) return;
+    const isHidden = nameEl.style.display === "none";
+    nameEl.style.display = isHidden ? "block" : "none";
+    editBtn.style.borderColor = isHidden ? "#14748e" : "rgba(255,255,255,0.16)";
+    editBtn.style.color = isHidden ? "#38bdf8" : "#cbd5e1";
+    if (isHidden) {
+      nameEl.focus();
+      nameEl.select();
+    }
+  };
+
+  row.appendChild(picker);
+  row.appendChild(editBtn);
+  fileEl.parentNode.insertBefore(row, fileEl);
 
   const upBtn = document.getElementById("msUploadBtn");
   if (upBtn) {
@@ -527,10 +561,16 @@ document.addEventListener("change", (ev) => {
     msEnsureUploadUI();
     const f = ev.target.files && ev.target.files[0];
     const nameEl = document.getElementById("msUploadName");
+    const editBtn = document.getElementById("msEditNameBtn");
     const lbl = document.getElementById("msPickLabel");
     const sz = document.getElementById("msPickSize");
     if (f) {
-      if (nameEl) nameEl.value = f.name;
+      if (nameEl) { nameEl.value = f.name; nameEl.style.display = "none"; }
+      if (editBtn) {
+        editBtn.style.display = "flex";
+        editBtn.style.borderColor = "rgba(255,255,255,0.16)";
+        editBtn.style.color = "#cbd5e1";
+      }
       if (lbl) { lbl.textContent = f.name; lbl.style.opacity = "1"; }
       if (sz) sz.textContent = (f.size / (1024 * 1024)).toFixed(1) + " MB";
     }
@@ -557,7 +597,9 @@ window.msStartUpload = async function() {
 
   // Limpiar selector para permitir agregar otro archivo al instante
   fileEl.value = "";
-  if (nameEl) nameEl.value = "";
+  if (nameEl) { nameEl.value = ""; nameEl.style.display = "none"; }
+  const editBtnReset = document.getElementById("msEditNameBtn");
+  if (editBtnReset) editBtnReset.style.display = "none";
   const lbl = document.getElementById("msPickLabel");
   const sz = document.getElementById("msPickSize");
   if (lbl) { lbl.textContent = "+ Seleccionar otro video..."; lbl.style.opacity = ".85"; }
