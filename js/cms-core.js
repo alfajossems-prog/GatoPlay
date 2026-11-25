@@ -1,4 +1,4 @@
-if (localStorage.getItem("gh_repo") === "GatoPlay") { localStorage.setItem("gh_repo", "gatoplay-db"); }
+if (!localStorage.getItem("gh_repo") || localStorage.getItem("gh_repo") === "GatoPlay") { localStorage.setItem("gh_repo", "gatoplay-db"); }
 /* Lógica principal de Gato CMS */
 
 (function() {
@@ -107,7 +107,7 @@ const STORAGE_KEY = "gatoplay_catalog_db";
             }
             const inferred = inferGithubRepoFromUrl();
             if (!localStorage.getItem("gh_owner")) localStorage.setItem("gh_owner", inferred.owner);
-            if (!localStorage.getItem("gh_repo")) localStorage.setItem("gh_repo", inferred.repo);
+            if (!localStorage.getItem("gh_repo")) localStorage.setItem("gh_repo", "gatoplay-db");
 
             updateApiKeysStatusUI();
             resetServersUI();
