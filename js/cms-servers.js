@@ -13,10 +13,10 @@
   const SVG_PLUS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
   const WORKER_BASE = "https://gato-uploader.josseanm.workers.dev";
-  const SRV_ORDER = ["voe", "streamtape", "mixdrop", "doodstream"];
-  const SRV_LABELS = { voe: "VOE", streamtape: "Streamtape", mixdrop: "Mixdrop", doodstream: "Dood" };
-  const SRV_SHORT = { voe: "V", streamtape: "S", mixdrop: "M", doodstream: "D" };
-  const SRV_COLORS = { voe: "#0284c7", streamtape: "#10b981", mixdrop: "#f59e0b", doodstream: "#ef4444" };
+  const SRV_ORDER = ["pixeldrain", "voe", "streamtape", "mixdrop", "doodstream"];
+  const SRV_LABELS = { pixeldrain: "Pixeldrain", voe: "VOE", streamtape: "Streamtape", mixdrop: "Mixdrop", doodstream: "Dood" };
+  const SRV_SHORT = { pixeldrain: "P", voe: "V", streamtape: "S", mixdrop: "M", doodstream: "D" };
+  const SRV_COLORS = { pixeldrain: "#8b5cf6", voe: "#0284c7", streamtape: "#10b981", mixdrop: "#f59e0b", doodstream: "#ef4444" };
 
   let activeServersMap = {};
   let allFilesRaw = [];
@@ -223,8 +223,8 @@
       const remBox = document.getElementById("msRemoteTargets");
       const upSel = document.getElementById("msUploadServer");
       const actives = SRV_ORDER.filter(k => activeServersMap[k]);
-      if (remBox) remBox.innerHTML = actives.map(k => `<label class="ms-chip"><input type="checkbox" class="ms-rem-chk" value="${k}" checked style="accent-color:#14748E;"><span class="ms-badge-mini" style="background:${SRV_COLORS[k]};color:${k==='mixdrop'?'#111':'#fff'};">${SRV_SHORT[k]}</span>${SRV_LABELS[k]}</label>`).join("");
-      if (upSel) upSel.innerHTML = actives.map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
+      if (remBox) remBox.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<label class="ms-chip"><input type="checkbox" class="ms-rem-chk" value="${k}" checked style="accent-color:#14748E;"><span class="ms-badge-mini" style="background:${SRV_COLORS[k]};color:${k==='mixdrop'?'#111':'#fff'};">${SRV_SHORT[k]}</span>${SRV_LABELS[k]}</label>`).join("");
+      if (upSel) upSel.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
       msLoadFiles();
     } catch (_) { st.textContent = "Error de conexión"; }
   }
@@ -287,7 +287,7 @@
           const pctTxt = qTask.pct > 0 ? ` (${qTask.pct}%)` : "";
           return `<button type="button" class="ms-srv-pill missing" disabled style="border-style:solid;border-color:#10b981;color:#10b981;opacity:0.95;">En cola${pctTxt}</button>`;
         }
-        const bestSrc = (s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : firstAvail;
+        const bestSrc = g.servers.pixeldrain ? g.servers.pixeldrain : ((s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : firstAvail);
         const srcUrl = (s === "mixdrop" && bestSrc.server === "streamtape") ? bestSrc.embed.replace("/e/", "/v/") : bestSrc.embed;
         return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(srcUrl)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
@@ -393,13 +393,15 @@
     list.forEach(item => {
       const k = (item.server || "").toLowerCase();
       if (k.includes("voe")) byKey.voe = item.embed || "";
-      else if (k.includes("mixdrop")) byKey.mixdrop = item.embed || "";
+      else if (k.includes("pixeldrain")) byKey.pixeldrain = item.embed || "";
+            else if (k.includes("mixdrop")) byKey.mixdrop = item.embed || "";
       else if (k.includes("streamtape")) byKey.streamtape = item.embed || "";
     });
 
     const fixedSlots = [
       { name: "VOE", url: byKey.voe || "", quality: "1080p" },
-      { name: "Mixdrop", url: byKey.mixdrop || "", quality: "1080p" },
+      { name: "Pixeldrain", url: byKey.pixeldrain || "", quality: "1080p" },
+            { name: "Mixdrop", url: byKey.mixdrop || "", quality: "1080p" },
       { name: "Streamtape", url: byKey.streamtape || "", quality: "1080p" }
     ];
 
