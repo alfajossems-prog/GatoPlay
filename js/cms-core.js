@@ -22,15 +22,23 @@ async function syncPanelConfigFromWorker(pass) {
     try {
         const res = await fetch("https://gato-uploader.josseanm.workers.dev/panel-config", {
             method: "GET",
-            headers: { "X-Panel-Pass": pass }
+            headers: { "X-Panel-Pass": pass.trim() }
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            alert("Auto-login: Worker respondió HTTP " + res.status + ". Verifica CMS_PASS en Cloudflare.");
+            return;
+        }
         const cfg = await res.json();
-        if (!cfg || !cfg.ok) return;
+        if (!cfg || !cfg.ok) {
+            alert("Auto-login: " + (cfg?.error || "Respuesta inválida del Worker"));
+            return;
+        }
         if (cfg.ghToken) localStorage.setItem("gh_token", cfg.ghToken);
         if (cfg.tmdbKey) localStorage.setItem("tmdb_api_key", cfg.tmdbKey);
         if (cfg.panelPass) localStorage.setItem("gato_worker_pass", cfg.panelPass);
-    } catch (_) {}
+    } catch (err) {
+        alert("Auto-login error de red: " + err.message);
+    }
 }
 
 async function handleGatoCmsLogin(ev) {
