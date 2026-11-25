@@ -451,56 +451,227 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
   };
 
   
-  document.addEventListener("change", (ev) => {
-    if (ev.target && ev.target.id === "msUploadFile") {
-      const f = ev.target.files && ev.target.files[0];
-      const nameEl = document.getElementById("msUploadName");
-      if (f && nameEl) nameEl.value = f.name;
-    }
-  });
+  const activeUploads = new Map();
+let uploadSeq = 0;
 
-  window.msStartUpload = async function() {
-    const srv = document.getElementById("msUploadServer").value, file = document.getElementById("msUploadFile").files[0];
-    const st = document.getElementById("msUploadStatus"), box = document.getElementById("msUploadProgressBox");
-    const bar = document.getElementById("msUpBar"), pctEl = document.getElementById("msUpPct"), spdEl = document.getElementById("msUpSpeed"), detEl = document.getElementById("msUpDetail");
-    const upBtn = document.getElementById("msUploadBtn"), cancelBtn = document.getElementById("msUploadCancelBtn");
-    if (!file) { alert("Selecciona un archivo de video."); return; }
-    st.textContent = ""; box.style.display = "flex"; bar.style.width = "0%"; pctEl.textContent = "0%"; detEl.textContent = "Obteniendo servidor..."; upBtn.disabled = true; cancelBtn.style.display = "inline-block";
-    try {
-      const ctrl = new AbortController();
-      const tOut = setTimeout(() => ctrl.abort(), 15000);
-      const r = await fetch(WORKER_BASE + "/upload-url?server=" + encodeURIComponent(srv), { headers: { "X-Panel-Pass": getPass() }, signal: ctrl.signal });
-      clearTimeout(tOut);
-      const d = await r.json();
-      if (!d.ok || !d.uploadUrl) throw new Error(d.error || "No se obtuvo URL");
-      const fd = new FormData();
-      if (d.extraFields) Object.entries(d.extraFields).forEach(([k, v]) => fd.append(k, v));
-      const nameEl = document.getElementById("msUploadName");
-      const rawName = (nameEl ? nameEl.value.trim() : "") || file.name;
-      const extMatch = file.name.match(/(\.[a-z0-9]{2,5})$/i);
-      const ext = extMatch ? extMatch[1] : ".mp4";
-      const finalName = /\.[a-z0-9]{2,5}$/i.test(rawName) ? rawName : (rawName + ext);
-      fd.append(d.fieldName || "file", file, finalName);
-      const t0 = Date.now();
-      activeXhr = new XMLHttpRequest();
-      activeXhr.open("POST", d.uploadUrl, true);
-        if (d.authHeader) activeXhr.setRequestHeader("Authorization", d.authHeader);
-      activeXhr.upload.onprogress = (ev) => {
-        if (!ev.lengthComputable) return;
-        const pct = Math.round((ev.loaded / ev.total) * 100), sec = Math.max((Date.now() - t0) / 1000, 0.1);
-        bar.style.width = pct + "%"; pctEl.textContent = pct + "%"; spdEl.textContent = (ev.loaded / 1048576 / sec).toFixed(2) + " MB/s"; detEl.textContent = fmtBytes(ev.loaded) + " / " + fmtBytes(ev.total);
-      };
-      activeXhr.onload = () => {
-        upBtn.disabled = false; cancelBtn.style.display = "none";
-        if (activeXhr.status >= 200 && activeXhr.status < 300) { bar.style.width = "100%"; pctEl.textContent = "100%"; st.innerHTML = '<span style="color:#10b981;font-weight:700;">Video subido. Actualizando...</span>'; setTimeout(() => msLoadFiles(), 1200); }
-        else st.innerHTML = '<span style="color:#ef4444;font-weight:700;">Error HTTP ' + activeXhr.status + '</span>';
-        activeXhr = null;
-      };
-      activeXhr.onerror = () => { upBtn.disabled = false; cancelBtn.style.display = "none"; st.innerHTML = '<span style="color:#ef4444;font-weight:700;">Error de red o CORS.</span>'; activeXhr = null; };
-      detEl.textContent = "Conectando con " + (SRV_LABELS[srv] || srv) + "...";
-      activeXhr.send(fd);
-    } catch (e) { upBtn.disabled = false; cancelBtn.style.display = "none"; st.innerHTML = '<span style="color:#ef4444;font-weight:700;">' + e.message + '</span>'; }
+function msEnsureUploadUI() {
+  const fileEl = document.getElementById("msUploadFile");
+  if (!fileEl || fileEl.dataset.minimalReady) return;
+  fileEl.dataset.minimalReady = "1";
+  fileEl.style.display = "none";
+
+  const picker = document.createElement("button");
+  picker.type = "button";
+  picker.id = "msPickFileBtn";
+  picker.style.cssText = "width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border-radius:10px;border:1px dashed rgba(255,255,255,0.22);background:rgba(255,255,255,0.03);color:#e2e8f0;font-size:13px;cursor:pointer;text-align:left;";
+  picker.innerHTML = '<span id="msPickLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85;">+ Seleccionar video...</span><span id="msPickSize" style="font-size:11px;opacity:.6;flex-shrink:0;">MP4 / MKV</span>';
+  picker.onclick = () => fileEl.click();
+  fileEl.parentNode.insertBefore(picker, fileEl);
+
+  const upBtn = document.getElementById("msUploadBtn");
+  if (upBtn) {
+    upBtn.style.cssText += ";border-radius:10px;font-weight:600;letter-spacing:.2px;";
+  }
+
+  let queue = document.getElementById("msUploadQueue");
+  if (!queue && upBtn) {
+    queue = document.createElement("div");
+    queue.id = "msUploadQueue";
+    queue.style.cssText = "display:flex;flex-direction:column;gap:8px;margin-top:12px;";
+    upBtn.parentNode.appendChild(queue);
+  }
+
+  if (!document.getElementById("msConfirmModal")) {
+    const modal = document.createElement("div");
+    modal.id = "msConfirmModal";
+    modal.style.cssText = "position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);backdrop-filter:blur(4px);padding:18px;";
+    modal.innerHTML = `
+      <div style="width:100%;max-width:340px;background:#111827;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.55);color:#f8fafc;">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px;">¿Cancelar subida?</div>
+        <div id="msConfirmText" style="font-size:13px;color:#94a3b8;line-height:1.45;margin-bottom:16px;word-break:break-word;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" id="msConfirmNo" style="padding:9px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#e2e8f0;font-size:12px;font-weight:600;cursor:pointer;">Seguir subiendo</button>
+          <button type="button" id="msConfirmYes" style="padding:9px 14px;border-radius:9px;border:none;background:#ef4444;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">Sí, cancelar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+}
+
+function msAskCancelConfirm(title, onConfirm) {
+  msEnsureUploadUI();
+  const modal = document.getElementById("msConfirmModal");
+  const txt = document.getElementById("msConfirmText");
+  const btnNo = document.getElementById("msConfirmNo");
+  const btnYes = document.getElementById("msConfirmYes");
+  txt.textContent = `Se detendrá la subida de "${title}".`;
+  modal.style.display = "flex";
+  const close = () => { modal.style.display = "none"; };
+  btnNo.onclick = close;
+  modal.onclick = (e) => { if (e.target === modal) close(); };
+  btnYes.onclick = () => { close(); onConfirm(); };
+}
+
+function msRefreshUploadBtn() {
+  const upBtn = document.getElementById("msUploadBtn");
+  if (!upBtn) return;
+  upBtn.disabled = false;
+  upBtn.textContent = activeUploads.size > 0 ? "+ Agregar otro archivo" : "Subir Video";
+}
+
+setInterval(msEnsureUploadUI, 600);
+
+document.addEventListener("change", (ev) => {
+  if (ev.target && ev.target.id === "msUploadFile") {
+    msEnsureUploadUI();
+    const f = ev.target.files && ev.target.files[0];
+    const nameEl = document.getElementById("msUploadName");
+    const lbl = document.getElementById("msPickLabel");
+    const sz = document.getElementById("msPickSize");
+    if (f) {
+      if (nameEl) nameEl.value = f.name;
+      if (lbl) { lbl.textContent = f.name; lbl.style.opacity = "1"; }
+      if (sz) sz.textContent = (f.size / (1024 * 1024)).toFixed(1) + " MB";
+    }
+  }
+});
+
+window.msStartUpload = async function() {
+  msEnsureUploadUI();
+  const srvEl = document.getElementById("msUploadServer");
+  const fileEl = document.getElementById("msUploadFile");
+  const nameEl = document.getElementById("msUploadName");
+  const queue = document.getElementById("msUploadQueue");
+  const srv = srvEl ? srvEl.value : "";
+  const file = fileEl && fileEl.files ? fileEl.files[0] : null;
+  if (!file) {
+    if (fileEl) fileEl.click();
+    return;
+  }
+
+  const rawName = (nameEl ? nameEl.value.trim() : "") || file.name;
+  const extMatch = file.name.match(/(\.[a-z0-9]{2,5})$/i);
+  const ext = extMatch ? extMatch[1] : ".mp4";
+  const finalName = /\.[a-z0-9]{2,5}$/i.test(rawName) ? rawName : (rawName + ext);
+
+  // Limpiar selector para permitir agregar otro archivo al instante
+  fileEl.value = "";
+  if (nameEl) nameEl.value = "";
+  const lbl = document.getElementById("msPickLabel");
+  const sz = document.getElementById("msPickSize");
+  if (lbl) { lbl.textContent = "+ Seleccionar otro video..."; lbl.style.opacity = ".85"; }
+  if (sz) sz.textContent = "MP4 / MKV";
+
+  const uid = "up_" + (++uploadSeq);
+  const srvColor = (typeof SRV_COLORS !== "undefined" && SRV_COLORS[srv]) ? SRV_COLORS[srv] : "#0284c7";
+  const srvLabel = (typeof SRV_LABELS !== "undefined" && SRV_LABELS[srv]) ? SRV_LABELS[srv] : srv;
+
+  const card = document.createElement("div");
+  card.id = uid;
+  card.style.cssText = "background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;";
+  card.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+        <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:${srvColor};color:${srv==="mixdrop"?"#111":"#fff"};flex-shrink:0;">${srvLabel}</span>
+        <span style="font-size:12px;font-weight:600;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${finalName}</span>
+      </div>
+      <button type="button" class="ms-up-cancel" style="padding:4px 9px;border-radius:7px;border:1px solid rgba(239,68,68,.45);background:rgba(239,68,68,.12);color:#fca5a5;font-size:11px;font-weight:600;cursor:pointer;flex-shrink:0;">Cancelar</button>
+    </div>
+    <div style="height:6px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden;">
+      <div class="ms-up-bar" style="height:100%;width:0%;background:${srvColor};transition:width .2s;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+      <span class="ms-up-detail">Obteniendo servidor...</span>
+      <span class="ms-up-pct">0%</span>
+    </div>`;
+  queue.prepend(card);
+
+  const bar = card.querySelector(".ms-up-bar");
+  const det = card.querySelector(".ms-up-detail");
+  const pctEl = card.querySelector(".ms-up-pct");
+  const cancelBtn = card.querySelector(".ms-up-cancel");
+
+  const entry = { xhr: null, aborted: false };
+  activeUploads.set(uid, entry);
+  msRefreshUploadBtn();
+
+  cancelBtn.onclick = () => {
+    msAskCancelConfirm(finalName, () => {
+      entry.aborted = true;
+      if (entry.xhr) entry.xhr.abort();
+      activeUploads.delete(uid);
+      msRefreshUploadBtn();
+      det.innerHTML = '<span style="color:#f87171;">Cancelado</span>';
+      cancelBtn.remove();
+      setTimeout(() => card.remove(), 1800);
+    });
   };
+
+  try {
+    const ctrl = new AbortController();
+    const tOut = setTimeout(() => ctrl.abort(), 15000);
+    const r = await fetch(WORKER_BASE + "/upload-url?server=" + encodeURIComponent(srv), {
+      headers: { "X-Panel-Pass": getPass() },
+      signal: ctrl.signal
+    });
+    clearTimeout(tOut);
+    const d = await r.json();
+    if (!d.ok || !d.uploadUrl) throw new Error(d.error || "No se obtuvo URL");
+    if (entry.aborted) return;
+
+    const fd = new FormData();
+    if (d.extraFields) Object.entries(d.extraFields).forEach(([k, v]) => fd.append(k, v));
+    fd.append(d.fieldName || "file", file, finalName);
+
+    const t0 = Date.now();
+    const xhr = new XMLHttpRequest();
+    entry.xhr = xhr;
+    xhr.open("POST", d.uploadUrl, true);
+    if (d.authHeader) xhr.setRequestHeader("Authorization", d.authHeader);
+
+    xhr.upload.onprogress = (ev) => {
+      if (!ev.lengthComputable) return;
+      const pct = Math.min(99, Math.round((ev.loaded / ev.total) * 100));
+      const sec = Math.max(0.5, (Date.now() - t0) / 1000);
+      const mbps = (ev.loaded / (1024 * 1024) / sec).toFixed(1);
+      bar.style.width = pct + "%";
+      pctEl.textContent = pct + "%";
+      det.textContent = `${(ev.loaded / (1024 * 1024)).toFixed(1)} / ${(ev.total / (1024 * 1024)).toFixed(1)} MB · ${mbps} MB/s`;
+    };
+
+    xhr.onload = () => {
+      activeUploads.delete(uid);
+      msRefreshUploadBtn();
+      cancelBtn.remove();
+      if (xhr.status >= 200 && xhr.status < 300) {
+        bar.style.width = "100%";
+        pctEl.textContent = "100%";
+        det.innerHTML = '<span style="color:#10b981;font-weight:700;">Listo · Actualizando lista...</span>';
+        setTimeout(() => { if (typeof msLoadFiles === "function") msLoadFiles(); }, 1200);
+        setTimeout(() => card.remove(), 4500);
+      } else {
+        det.innerHTML = `<span style="color:#ef4444;font-weight:700;">Error HTTP ${xhr.status}</span>`;
+      }
+    };
+
+    xhr.onerror = () => {
+      if (entry.aborted) return;
+      activeUploads.delete(uid);
+      msRefreshUploadBtn();
+      cancelBtn.remove();
+      det.innerHTML = '<span style="color:#ef4444;font-weight:700;">Error de red o CORS</span>';
+    };
+
+    det.textContent = "Conectando con " + srvLabel + "...";
+    xhr.send(fd);
+  } catch (e) {
+    if (entry.aborted) return;
+    activeUploads.delete(uid);
+    msRefreshUploadBtn();
+    cancelBtn.remove();
+    det.innerHTML = `<span style="color:#ef4444;font-weight:700;">${e.message}</span>`;
+  }
+};
 
   window.msCancelUpload = () => {
     if (activeXhr) { activeXhr.abort(); activeXhr = null; document.getElementById("msUploadBtn").disabled = false; document.getElementById("msUploadCancelBtn").style.display = "none"; document.getElementById("msUploadStatus").innerHTML = '<span style="color:#f59e0b;">Subida cancelada.</span>'; }
