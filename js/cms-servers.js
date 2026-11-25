@@ -28,7 +28,38 @@
 
   try { msTasks = JSON.parse(localStorage.getItem("gato_remote_tasks") || "[]"); } catch(_) { msTasks = []; }
   const getPass = () => localStorage.getItem("gato_worker_pass") || "";
-  const saveTasks = () => localStorage.setItem("gato_remote_tasks", JSON.stringify(msTasks.slice(-20)));
+  let msSyncTimer = null;
+  const pushTasksToCloud = () => {
+    if (!getPass()) return;
+    clearTimeout(msSyncTimer);
+    msSyncTimer = setTimeout(() => {
+      fetch(WORKER_BASE + "/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Panel-Pass": getPass() },
+        body: JSON.stringify({ tasks: msTasks.slice(0, 20) })
+      }).catch(() => {});
+    }, 700);
+  };
+  const saveTasks = (skipCloud = false) => {
+    localStorage.setItem("gato_remote_tasks", JSON.stringify(msTasks.slice(0, 20)));
+    if (!skipCloud) pushTasksToCloud();
+  };
+  async function loadTasksFromCloud() {
+    if (!getPass()) return;
+    try {
+      const r = await fetch(WORKER_BASE + "/tasks", { headers: { "X-Panel-Pass": getPass() } });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (Array.isArray(d.tasks)) {
+        msTasks = d.tasks;
+        saveTasks(true);
+        renderTray();
+        msRenderFiles();
+        loadTasksFromCloud();
+    if (msTasks.some(t => t.state === "running" || t.state === "processing")) startPolling();
+      }
+    } catch (_) {}
+  }
 
   const fmtBytes = (b) => {
     const n = Number(b) || 0;
@@ -472,7 +503,23 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
   };
 
   window.msToggleTray = () => { msTrayOpen = !msTrayOpen; const l = document.getElementById("msTrayList"), a = document.getElementById("msTrayArrow"); if (l) l.style.display = msTrayOpen ? "flex" : "none"; if (a) a.textContent = msTrayOpen ? "▾" : "▴"; };
-  window.msClearDoneTasks = () => { msTasks = msTasks.filter(t => t.state === "running"); saveTasks(); renderTray(); };
+  window.msClearDoneTasks = () => { msTasks = msTasks.filter(t => t.state === "running" || t.state === "processing"); saveTasks(); renderTray(); };
+  window.msCancelTask = async (uid) => {
+    const idx = msTasks.findIndex(t => t.uid === uid);
+    if (idx === -1) return;
+    const t = msTasks[idx];
+    msTasks.splice(idx, 1);
+    saveTasks();
+    renderTray();
+    msRenderFiles();
+    if (t.id && (t.state === "running" || t.state === "processing") && getPass()) {
+      fetch(WORKER_BASE + "/remote-cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Panel-Pass": getPass() },
+        body: JSON.stringify({ server: t.server, id: t.id })
+      }).catch(() => {});
+    }
+  };
   window.msEnqueueTask = (task) => {
     const tKey = normTitle(task.title || "");
     const exists = msTasks.find(t => (t.state === "running" || t.state === "processing") && t.server === task.server && normTitle(t.title) === tKey);
@@ -496,7 +543,8 @@ window.msQuickTransfer = async function(btn, encSourceUrl, targetSrv) {
     listEl.innerHTML = msTasks.map(t => {
       const lbl = SRV_LABELS[t.server] || t.server, col = SRV_COLORS[t.server] || "#0E5A6F";
       const badge = t.state === "done" ? '<span style="color:#10b981;font-weight:700;">Listo</span>' : (t.state === "error" ? '<span style="color:#ef4444;font-weight:700;">Error</span>' : `<span style="color:var(--gt-muted);">${t.pct > 0 ? t.pct + "% · " : ""}${t.detail}</span>`);
-      return `<div class="ms-tray-item"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><strong style="color:${col};">${lbl}</strong> · ${t.title}</div>${badge}</div>${t.state === "running" ? `<div class="ms-progress-track" style="height:6px;"><div class="ms-progress-fill" style="width:${Math.max(8, t.pct)}%;"></div></div>` : ""}</div>`;
+      const cancelBtn = `<button type="button" onclick="msCancelTask('${t.uid}')" title="Cancelar / Quitar" style="background:transparent;border:none;color:#ef4444;cursor:pointer;font-weight:800;font-size:13px;padding:0 4px;line-height:1;">✕</button>`;
+      return `<div class="ms-tray-item"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center;"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;"><strong style="color:${col};">${lbl}</strong> · ${t.title}</div><div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">${badge}${cancelBtn}</div></div>${t.state === "running" ? `<div class="ms-progress-track" style="height:6px;"><div class="ms-progress-fill" style="width:${Math.max(8, t.pct)}%;"></div></div>` : ""}</div>`;
     }).join("");
   }
 
