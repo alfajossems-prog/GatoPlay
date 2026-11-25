@@ -3,10 +3,10 @@
 (function() {
     const EXP_KEY = "gato_cms_auth_exp";
     const HASH_KEY = "gato_cms_auth_hash";
-    const EXPECTED = "4c8a863e100d943d5e8df79449bf683678d4168d38368338504fcfc01a9d3572";
+    const ALLOWED_HASHES = ["4c8a863e100d943d5e8df79449bf683678d4168d38368338504fcfc01a9d3572", "23384a56a74c20a474ed46afe2de42dc220c0055f07199bef4e9ad653ce17024"];
     const exp = Number(localStorage.getItem(EXP_KEY) || 0);
     const savedHash = localStorage.getItem(HASH_KEY) || "";
-    if (savedHash === EXPECTED && Date.now() < exp) {
+    if (ALLOWED_HASHES.includes(savedHash) && Date.now() < exp) {
         document.getElementById("gatoCmsLoginGate")?.classList.add("unlocked");
     }
 })();
@@ -50,7 +50,7 @@ async function handleGatoCmsLogin(ev) {
 
     try {
         const digest = await _sha256Hex(user + ":" + pass);
-        if (digest === "4c8a863e100d943d5e8df79449bf683678d4168d38368338504fcfc01a9d3572") {
+        if (["4c8a863e100d943d5e8df79449bf683678d4168d38368338504fcfc01a9d3572", "23384a56a74c20a474ed46afe2de42dc220c0055f07199bef4e9ad653ce17024"].includes(digest)) {
             const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
             localStorage.setItem("gato_cms_auth_hash", digest);
             localStorage.setItem("gato_cms_auth_exp", String(Date.now() + sevenDaysMs));
