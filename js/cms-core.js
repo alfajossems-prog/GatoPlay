@@ -936,10 +936,6 @@ const STORAGE_KEY = "gatoplay_catalog_db";
             renderAdminList();
         }
         window.deleteCatalogItem = toggleHideCatalogItem;
-        return;
-    }
-    renderAdminList();
-
             const currentQ = document.getElementById("tmdbQuery").value.trim();
             if (currentQ.length >= 2) searchTmdb(currentQ);
         }
