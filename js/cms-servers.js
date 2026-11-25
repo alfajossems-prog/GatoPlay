@@ -783,3 +783,56 @@ window.msStartUpload = async function() {
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
+
+
+/* GATO_STATE_PERSIST */
+(function () {
+  const KEY_OPEN = "gato_ms_open";
+  const KEY_TAB = "gato_ms_tab";
+
+  const origOpen = window.msOpenModal;
+  if (typeof origOpen === "function") {
+    window.openMultiServerModal = window.msOpenModal = function (...args) {
+      sessionStorage.setItem(KEY_OPEN, "1");
+      const res = origOpen.apply(this, args);
+      const savedTab = sessionStorage.getItem(KEY_TAB);
+      if (savedTab && typeof window.msSwitchTab === "function") {
+        setTimeout(() => window.msSwitchTab(savedTab), 30);
+      }
+      return res;
+    };
+  }
+
+  const origSwitch = window.msSwitchTab;
+  if (typeof origSwitch === "function") {
+    window.msSwitchTab = function (tab, ...rest) {
+      if (tab) sessionStorage.setItem(KEY_TAB, tab);
+      return origSwitch.call(this, tab, ...rest);
+    };
+  }
+
+  const origClose = window.msCloseModal;
+  if (typeof origClose === "function") {
+    window.msCloseModal = function (...args) {
+      sessionStorage.removeItem(KEY_OPEN);
+      return origClose.apply(this, args);
+    };
+  }
+
+  document.addEventListener("click", (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (!btn) return;
+    const oc = btn.getAttribute("onclick") || "";
+    if (oc.includes("msCloseModal") || btn.id === "msCloseBtn") {
+      sessionStorage.removeItem(KEY_OPEN);
+    }
+  });
+
+  window.addEventListener("DOMContentLoaded", () => {
+    if (sessionStorage.getItem(KEY_OPEN) === "1") {
+      setTimeout(() => {
+        if (typeof window.msOpenModal === "function") window.msOpenModal();
+      }, 250);
+    }
+  });
+})();
