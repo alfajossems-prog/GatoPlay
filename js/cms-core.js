@@ -1,3 +1,4 @@
+if (localStorage.getItem("gh_repo") === "GatoPlay") { localStorage.setItem("gh_repo", "gatoplay-db"); }
 /* Lógica principal de Gato CMS */
 
 (function() {
