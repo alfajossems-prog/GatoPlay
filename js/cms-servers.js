@@ -52,6 +52,7 @@
       const d = await r.json();
       if (Array.isArray(d.tasks)) {
         msTasks = d.tasks;
+        if (msTasks.some(t => t.state === "running" || t.state === "processing")) msTrayOpen = true;
         saveTasks(true);
         renderTray();
         msRenderFiles();
