@@ -224,7 +224,7 @@
       const upSel = document.getElementById("msUploadServer");
       const actives = SRV_ORDER.filter(k => activeServersMap[k]);
       if (remBox) remBox.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<label class="ms-chip"><input type="checkbox" class="ms-rem-chk" value="${k}" checked style="accent-color:#14748E;"><span class="ms-badge-mini" style="background:${SRV_COLORS[k]};color:${k==='mixdrop'?'#111':'#fff'};">${SRV_SHORT[k]}</span>${SRV_LABELS[k]}</label>`).join("");
-      if (upSel) upSel.innerHTML = actives.map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
+      if (upSel) upSel.innerHTML = actives.filter(k => k !== "pixeldrain").map(k => `<option value="${k}">${SRV_LABELS[k]}${k==='mixdrop'?' (máx. 100 MB)':''}</option>`).join("");
       msLoadFiles();
     } catch (_) { st.textContent = "Error de conexión"; }
   }
@@ -512,8 +512,10 @@ function msEnsureUploadUI() {
   if (!queue && upBtn) {
     queue = document.createElement("div");
     queue.id = "msUploadQueue";
-    queue.style.cssText = "display:flex;flex-direction:column;gap:8px;margin-top:12px;";
-    upBtn.parentNode.appendChild(queue);
+    queue.style.cssText = "display:flex;flex-direction:column;gap:8px;margin-top:12px;width:100%;";
+    const btnRow = upBtn.parentNode;
+    if (btnRow && btnRow.parentNode) btnRow.parentNode.insertBefore(queue, btnRow.nextSibling);
+    else btnRow.appendChild(queue);
   }
 
   if (!document.getElementById("msConfirmModal")) {
