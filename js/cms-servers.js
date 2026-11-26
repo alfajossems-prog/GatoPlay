@@ -363,7 +363,10 @@ function getFileUploaderBadge(title) {
           const pctTxt = qTask.pct > 0 ? ` (${qTask.pct}%)` : "";
           return `<button type="button" class="ms-srv-pill missing" disabled style="border-style:solid;border-color:#10b981;color:#10b981;opacity:0.95;">En cola${pctTxt}</button>`;
         }
-        const bestSrc = g.servers.pixeldrain ? g.servers.pixeldrain : ((s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : firstAvail);
+        if (s === "pixeldrain") return "";
+        const nonPixelAvail = Object.values(g.servers).find(x => x.server !== "pixeldrain");
+        if (!nonPixelAvail) return "";
+        const bestSrc = (s === "mixdrop" && g.servers.streamtape) ? g.servers.streamtape : nonPixelAvail;
         const srcUrl = (s === "mixdrop" && bestSrc.server === "streamtape") ? bestSrc.embed.replace("/e/", "/v/") : bestSrc.embed;
         return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(srcUrl)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
