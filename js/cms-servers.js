@@ -320,6 +320,7 @@ function getFileUploaderBadge(title) {
         return `<button type="button" class="ms-srv-pill missing" onclick="msQuickTransfer(this,'${encodeURIComponent(srcUrl)}','${s}')">${SVG_PLUS} ${SRV_LABELS[s]}</button>`;
       }).join("");
       const allEmbedsJson = encodeURIComponent(JSON.stringify(Object.values(g.servers).map(x => ({ server: x.server, embed: x.embed }))));
+      const renameTargetsJson = encodeURIComponent(JSON.stringify(Object.values(g.servers).map(x => ({ server: x.server, id: x.id || (x.embed || "").split("/").filter(Boolean).pop() || "" }))));
       return `<div class="ms-card">
         <div class="ms-card-top">
           <div style="min-width:0;">
@@ -331,7 +332,7 @@ function getFileUploaderBadge(title) {
               ${lowSize ? '<span class="ms-tag ms-tag-warn">Archivo pequeño</span>' : ''}
             </div>
           </div>
-          <a href="${firstAvail.embed}" target="_blank" rel="noopener" class="ms-icon-btn" style="text-decoration:none;width:30px;height:30px;" title="Probar video">${SVG_PLAY}</a>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;"><button type="button" class="ms-icon-btn" style="width:30px;height:30px;" title="Renombrar en servidores" onclick="msRenameGroup(this,'${renameTargetsJson}','${encodeURIComponent(g.displayTitle || g.title || '')}')">${SVG_RENAME}</button><a href="${firstAvail.embed}" target="_blank" rel="noopener" class="ms-icon-btn" style="text-decoration:none;width:30px;height:30px;" title="Probar video">${SVG_PLAY}</a></div>
         </div>
         <div class="ms-pills-row">${pillsHtml}</div>
         <div class="ms-card-actions"><button type="button" class="ms-btn ms-btn-primary" onclick="msInsertAll('${allEmbedsJson}')">Insertar Todos (${Object.keys(g.servers).length})</button></div>
