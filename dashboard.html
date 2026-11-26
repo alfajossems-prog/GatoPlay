@@ -66,7 +66,7 @@
     }
     .pill.active { background: var(--accent); color: #fff; }
 
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
     @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
     .kpi {
@@ -245,6 +245,11 @@
         <span class="kpi-label">Reportes Pendientes</span>
         <span id="kpiReports" class="kpi-val">0</span>
         <span class="kpi-sub">Enviados desde la app</span>
+      </div>
+      <div class="kpi">
+        <span class="kpi-label">Posibles Desinstalaciones</span>
+        <span id="kpiUninstalled" class="kpi-val">0</span>
+        <span id="kpiRetention" class="kpi-sub">>14 días sin actividad</span>
       </div>
     </section>
 
@@ -463,7 +468,12 @@
         const vMap = { today: d.views.today, yesterday: d.views.yesterday, week: d.views.week, month: d.views.month, year: d.views.year };
         $("kpiViewsLabel").textContent = `Vistas (${rangeLabels[currentRange]})`;
         $("kpiViewsVal").textContent = (vMap[currentRange] || 0).toLocaleString();
-        $("kpiReports").textContent = d.reports.length;
+                $("kpiReports").textContent = d.reports.length;
+        const uninst = d.devices.uninstalled_est || 0;
+        const totDev = d.devices.total || 0;
+        const retPct = totDev > 0 ? Math.round(((totDev - uninst) / totDev) * 100) : 100;
+        $("kpiUninstalled").textContent = uninst.toLocaleString();
+        $("kpiRetention").textContent = `>14d sin ping • Retención ${retPct}%`;
 
         // Desglose por periodo
         const periods = [
