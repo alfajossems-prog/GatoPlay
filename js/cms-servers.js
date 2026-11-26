@@ -1,3 +1,51 @@
+const SVG_RENAME = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>';
+window.msRenameGroup = async function (btn, targetsEnc, currentNameEnc) {
+  const currentName = decodeURIComponent(currentNameEnc || "");
+  const targets = JSON.parse(decodeURIComponent(targetsEnc || "%5B%5D"));
+  const newName = prompt("Nuevo nombre para el archivo en los servidores:", currentName);
+  if (!newName || !newName.trim() || newName.trim() === currentName) return;
+
+  const pass =
+    localStorage.getItem("gato_worker_pass") ||
+    localStorage.getItem("gato_admin_pass") ||
+    "";
+  if (!pass) {
+    alert("No se encontró la contraseña del panel.");
+    return;
+  }
+
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = "...";
+
+  try {
+    const r = await fetch("https://gato-uploader.josseanm.workers.dev/rename", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Panel-Pass": pass
+      },
+      body: JSON.stringify({ name: newName.trim(), targets })
+    });
+    const d = await r.json();
+    if (!d.ok) {
+      alert("Error al renombrar: " + (d.error || "Desconocido"));
+    } else {
+      const okList = (d.results || []).filter(x => x.ok).map(x => x.server);
+      const failList = (d.results || []).filter(x => !x.ok).map(x => `${x.server} (${x.error || "error"})`);
+      let msg = okList.length ? "✅ Renombrado en: " + okList.join(", ") : "⚠️ No se pudo renombrar.";
+      if (failList.length) msg += "\nℹ️ Omitidos/Error: " + failList.join(", ");
+      alert(msg);
+      if (typeof window.msLoadFiles === "function") window.msLoadFiles();
+    }
+  } catch (e) {
+    alert("Error de red al renombrar: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+};
+
 
 window.__gatoUploaderMap = window.__gatoUploaderMap || {};
 (function loadUploaderMap() {
