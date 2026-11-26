@@ -89,7 +89,7 @@ function getFileUploaderBadge(title) {
   const SVG_PLUS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 
   const WORKER_BASE = "https://gato-uploader.josseanm.workers.dev";
-  const SRV_ORDER = ["voe", "streamtape", "mixdrop", "doodstream"];
+  const SRV_ORDER = ["pixeldrain", "voe", "streamtape", "mixdrop", "doodstream"];
   const SRV_LABELS = { pixeldrain: "Pixeldrain", voe: "VOE", streamtape: "Streamtape", mixdrop: "Mixdrop", doodstream: "Dood" };
   const SRV_SHORT = { pixeldrain: "P", voe: "V", streamtape: "S", mixdrop: "M", doodstream: "D" };
   const SRV_COLORS = { pixeldrain: "#8b5cf6", voe: "#0284c7", streamtape: "#10b981", mixdrop: "#f59e0b", doodstream: "#ef4444" };
@@ -325,7 +325,7 @@ function getFileUploaderBadge(title) {
     const activeSrvs = SRV_ORDER.filter(k => activeServersMap[k]);
     const catSet = getCatalogEmbedSet();
     const q = (document.getElementById("msSearchInput")?.value || "").toLowerCase().trim();
-    const isIncomplete = (g) => activeSrvs.some(s => !g.servers[s]);
+    const isIncomplete = (g) => activeSrvs.some(s => s !== "pixeldrain" && !g.servers[s]);
     const isPublished = (g) => Object.values(g.servers).some(f => catSet.has(f.embed));
 
     const counts = { all: groups.length, incomplete: groups.filter(isIncomplete).length, unpublished: groups.filter(g => !isPublished(g)).length };
