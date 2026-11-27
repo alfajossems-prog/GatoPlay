@@ -225,15 +225,6 @@
             <label for="cmsLoginPass">Contraseña</label>
             <input type="password" id="cmsLoginPass" class="cms-login-input" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
         </div>
-        
-      <div style="margin-top:10px;margin-bottom:12px;">
-        <label style="display:block;font-size:12px;color:#9ca3af;margin-bottom:4px;">Formato de anuncios</label>
-        <select id="mon-ad-format" style="width:100%;padding:9px 10px;border-radius:8px;background:#0A0B0E;color:#fff;border:1px solid #232730;font-size:13px;">
-          <option value="both">Ambos (Video + Imagen)</option>
-          <option value="video">Solo Videos</option>
-          <option value="image">Solo Imágenes</option>
-        </select>
-      </div>
 <button type="submit" class="cms-login-btn">Iniciar Sesión</button>
         <div id="cmsLoginErr" class="cms-login-err"></div>
     </form>
@@ -904,6 +895,14 @@ if ("serviceWorker" in navigator) {
           <label style="font-size:12px;opacity:.75;">Cooldown mínimo (min)</label>
           <input id="monCooldownMin" type="number" min="1" style="width:100%;box-sizing:border-box;padding:8px;border-radius:8px;border:1px solid #232730;background:#121418;color:#fff;">
         </div>
+      <div>
+        <label style="display:block;font-size:12px;color:#9ca3af;margin-bottom:4px;">Formato de anuncios</label>
+        <select id="mon-ad-format" style="width:100%;padding:9px 10px;border-radius:8px;background:#0A0B0E;color:#fff;border:1px solid #232730;font-size:13px;">
+          <option value="both">Ambos (Video + Imagen)</option>
+          <option value="video">Solo Videos</option>
+          <option value="image">Solo Imágenes</option>
+        </select>
+      </div>
       </div>
 
       <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin-top:8px;">
@@ -955,7 +954,7 @@ if ("serviceWorker" in navigator) {
     document.getElementById("monModal").style.display = "none";
   }
 </script>
-<script src="js/cms-monetization.js?v=1795780474"></script>
+<script src="js/cms-monetization.js?v=1795780840"></script>
 <!-- GATO_MONETIZATION_END -->
 
 </body>
