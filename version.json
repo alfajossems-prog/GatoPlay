@@ -1,7 +1,7 @@
 {
-  "versionCode": 8,
-  "versionName": "1.0.8",
-  "changelog": "Se mejoró el tiempo de carga del reproductor",
+  "versionCode": 9,
+  "versionName": "1.0.9",
+  "changelog": "Se mejoro compatibilidad con pantalla tv",
   "apkUrl": "https://github.com/alfajossems-prog/GatoPlay/releases/latest/download/GatoPlay_Hibrido.apk",
   "forceUpdate": true
 }
