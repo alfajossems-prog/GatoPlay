@@ -70,6 +70,7 @@
         document.getElementById("monAdsEnabled").checked = !!d.ads_enabled;
         document.getElementById("monTestMode").checked = !!d.unity_test_mode;
         document.getElementById("monGameId").value = d.unity_game_id || "";
+    const fmtEl = document.getElementById('mon-ad-format'); if (fmtEl) fmtEl.value = (cfg.ad_format || 'both');
         document.getElementById("monInterstitialId").value = d.interstitial_placement || "Interstitial_Android";
         document.getElementById("monRewardedId").value = d.rewarded_placement || "Rewarded_Android";
         document.getElementById("monPreroll").checked = !!d.preroll_enabled;
@@ -98,6 +99,7 @@
       const payload = {
         ads_enabled: document.getElementById("monAdsEnabled").checked,
         unity_game_id: document.getElementById("monGameId").value.trim(),
+      ad_format: (document.getElementById('mon-ad-format')?.value || 'both'),
         unity_test_mode: document.getElementById("monTestMode").checked,
         interstitial_placement: document.getElementById("monInterstitialId").value.trim() || "Interstitial_Android",
         rewarded_placement: document.getElementById("monRewardedId").value.trim() || "Rewarded_Android",
